@@ -206,6 +206,7 @@ import { api } from "../../lib/api";
 import { eventBus } from "../../lib/eventBus";
 import { isRemoteDataRefreshMessage } from "../../lib/remoteDataEvents";
 import { MessageList } from "./MessageList";
+import { useCombinedTranscript } from "../../lib/useCombinedTranscript";
 import { MultiSelect } from "../MultiSelect";
 import { formatModelName } from "../../lib/format";
 import {
@@ -231,6 +232,8 @@ const POLL_INTERVAL_MS = 3000;
  * dropdown without a reload.
  */
 const TRANSCRIPTS_REFRESH_MS = 15000;
+/** Picker value for the combined view of every transcript in the session. */
+const ALL_AGENTS = "__all__";
 
 /** Props for {@link ConversationView}. */
 interface ConversationViewProps {
@@ -267,8 +270,19 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   // it never changes what is fetched, so paging and live updates are untouched.
   const [filter, setFilter] = useState<ConversationFilter>(EMPTY_CONVERSATION_FILTER);
   const filterActive = isConversationFilterActive(filter);
-  const facets = useMemo(() => conversationFacets(messages), [messages]);
-  const shownMessages = useMemo(() => filterConversation(messages, filter), [messages, filter]);
+  const combinedMode = selectedTranscript === ALL_AGENTS;
+  const combined = useCombinedTranscript(sessionId, transcripts, combinedMode);
+  const viewMessages: TranscriptMessage[] = combinedMode ? combined.messages : messages;
+  const viewLoading = combinedMode ? combined.loading : loading;
+  const viewHasMore = combinedMode ? combined.hasMore : hasMore;
+  const viewLoadingHistory = combinedMode ? combined.loadingOlder : loadingHistory;
+  const viewError = combinedMode ? combined.error : error;
+  const shownTotal = combinedMode ? visibleMessageCount(viewMessages) : total;
+  const facets = useMemo(() => conversationFacets(viewMessages), [viewMessages]);
+  const shownMessages = useMemo(
+    () => filterConversation(viewMessages, filter),
+    [viewMessages, filter]
+  );
 
   // Track JSONL line numbers for incremental requests and history loading
   const lastLineRef = useRef(0);
@@ -320,6 +334,14 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
 
   // Initial load: fetch the latest N messages
   useEffect(() => {
+    if (combinedMode) {
+      setMessages([]);
+      setTotal(0);
+      setHasMore(false);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
 
     async function load() {
@@ -352,7 +374,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     return () => {
       cancelled = true;
     };
-  }, [sessionId, selectedTranscript]);
+  }, [sessionId, selectedTranscript, combinedMode]);
 
   // Incrementally load new messages. Two modes:
   //   - bootstrap (lastLineRef === 0): the initial load saw an empty
@@ -362,6 +384,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   //     parsed message we've seen. The server already de-overlaps via
   //     afterLine, so we can safely append.
   const fetchNewMessages = useCallback(async () => {
+    if (combinedMode) return;
     if (fetchingRef.current) {
       // Coalesce: remember a trigger arrived during this fetch and re-run
       // exactly once when the in-flight request settles.
@@ -430,7 +453,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, selectedTranscript]);
+  }, [sessionId, selectedTranscript, combinedMode]);
 
   // WebSocket subscription: refetch on transcript events and session updates.
   // Cursor's native chat watcher emits session_updated as soon as a prompt is
@@ -501,14 +524,15 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchNewMessages();
+      await (combinedMode ? combined.refresh() : fetchNewMessages());
     } finally {
       setRefreshing(false);
     }
-  }, [fetchNewMessages]);
+  }, [combinedMode, combined.refresh, fetchNewMessages]);
 
   // Scroll-up to load history
   const loadHistory = useCallback(async () => {
+    if (combinedMode) return;
     if (historyLoadingRef.current || !hasMore) return;
     // Need the first message's line number
     // Since message objects don't have a _line field, we track it via firstLineRef
@@ -551,7 +575,18 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       historyLoadingRef.current = false;
       setLoadingHistory(false);
     }
-  }, [sessionId, selectedTranscript, hasMore]);
+  }, [sessionId, selectedTranscript, hasMore, combinedMode]);
+
+  // Load one older page of the combined view, preserving scroll position.
+  const loadOlderView = useCallback(async () => {
+    if (!combinedMode) return loadHistory();
+    const container = scrollContainerRef.current;
+    const prevScrollHeight = container?.scrollHeight ?? 0;
+    await combined.loadOlder();
+    requestAnimationFrame(() => {
+      if (container) container.scrollTop = container.scrollHeight - prevScrollHeight;
+    });
+  }, [combinedMode, combined.loadOlder, loadHistory]);
 
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -578,10 +613,10 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     }
 
     // Load history when scrolled to top
-    if (container.scrollTop <= 50 && hasMore) {
-      loadHistory();
+    if (container.scrollTop <= 50 && viewHasMore) {
+      loadOlderView();
     }
-  }, [hasMore, loadHistory]);
+  }, [viewHasMore, loadOlderView]);
 
   // Browsers occasionally do not emit another scroll event after a touchpad
   // fling lands exactly at scrollTop=0. Observing a tiny marker at the top
@@ -590,31 +625,37 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   useEffect(() => {
     const root = scrollContainerRef.current;
     const sentinel = historySentinelRef.current;
-    if (!root || !sentinel || !hasMore || loading || typeof IntersectionObserver === "undefined") {
+    if (
+      !root ||
+      !sentinel ||
+      !viewHasMore ||
+      viewLoading ||
+      typeof IntersectionObserver === "undefined"
+    ) {
       return;
     }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) loadHistory();
+        if (entries.some((entry) => entry.isIntersecting)) loadOlderView();
       },
       { root, rootMargin: "64px 0px 0px", threshold: 0 }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loading, loadHistory]);
+  }, [viewHasMore, viewLoading, loadOlderView]);
 
   // Auto-scroll to bottom after initial load
   useEffect(() => {
-    if (!loading && messages.length > 0) {
+    if (!viewLoading && viewMessages.length > 0) {
       scrollToBottom();
     }
-  }, [loading, scrollToBottom]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [viewLoading, scrollToBottom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative flex flex-col" style={{ minHeight: 0 }}>
       {/* Toolbar - always rendered after the initial load so users can
           refresh even when no messages have streamed yet. */}
-      {!loading && (
+      {!viewLoading && (
         <div className="flex items-center gap-3 mb-3 flex-shrink-0">
           {transcripts.length > 1 && (
             <div className="relative">
@@ -623,6 +664,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
                 onChange={(e) => setSelectedTranscript(e.target.value || null)}
                 className="appearance-none bg-surface-2 border border-surface-3 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-300 focus:outline-none focus:border-violet-500/50 hover:border-violet-500/30 cursor-pointer transition-colors"
               >
+                <option value={ALL_AGENTS}>{t("detail.transcript.allAgents")}</option>
                 {transcripts.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -634,7 +676,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
           )}
           <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 font-mono bg-surface-2 border border-surface-3 rounded-md px-2 py-1">
             <MessagesSquare className="w-3 h-3" />
-            {total} message{total !== 1 ? "s" : ""}
+            {shownTotal} message{shownTotal !== 1 ? "s" : ""}
           </span>
           <button
             type="button"
@@ -652,7 +694,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
 
       {/* Content filter - by kind of content and by tool. Counts cover the
           messages loaded so far, which is also what the filter applies to. */}
-      {!loading && messages.length > 0 && (
+      {!viewLoading && viewMessages.length > 0 && (
         <div
           className="flex flex-wrap items-center gap-2 mb-3 flex-shrink-0"
           data-testid="conversation-filters"
@@ -724,7 +766,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
               <span className="text-[11px] text-gray-500">
                 {t("detail.transcript.filter.shown", {
                   shown: visibleMessageCount(shownMessages),
-                  loaded: visibleMessageCount(messages),
+                  loaded: visibleMessageCount(viewMessages),
                 })}
               </span>
               <button
@@ -740,9 +782,9 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       )}
 
       {/* Error alert */}
-      {error && (
+      {viewError && (
         <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex-shrink-0">
-          {error}
+          {viewError}
         </div>
       )}
 
@@ -756,7 +798,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       >
         <div ref={historySentinelRef} aria-hidden="true" className="h-px" />
         {/* History loading indicator */}
-        {loadingHistory && (
+        {viewLoadingHistory && (
           <div className="flex justify-center py-3">
             <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
             <span className="text-xs text-gray-500 ml-2">Loading history...</span>
@@ -764,23 +806,28 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
         )}
 
         {/* Scroll-up for history hint */}
-        {hasMore && !loadingHistory && !loading && (
+        {viewHasMore && !viewLoadingHistory && !viewLoading && (
           <div className="flex justify-center py-2">
             <button
               type="button"
-              onClick={loadHistory}
+              onClick={loadOlderView}
               className="text-[11px] text-gray-500 hover:text-violet-300 transition-colors"
             >
               {t("detail.transcript.loadOlder")}
             </button>
           </div>
         )}
+        {combinedMode && combined.heldBack > 0 && (
+          <p className="text-center text-[11px] text-gray-500 pb-2">
+            {t("detail.transcript.heldBack", { count: combined.heldBack })}
+          </p>
+        )}
 
-        {loading ? (
+        {viewLoading ? (
           <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
             Loading conversation...
           </div>
-        ) : messages.length === 0 ? (
+        ) : viewMessages.length === 0 ? (
           <div className="mx-auto max-w-md py-12 text-center">
             <p className="text-sm text-gray-400">No conversation records found.</p>
             <p className="mt-2 text-xs leading-relaxed text-gray-500">
@@ -795,7 +842,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
             {t("detail.transcript.filter.noMatch")}
           </p>
         ) : (
-          <MessageList messages={shownMessages} loading={false} />
+          <MessageList messages={shownMessages} loading={false} showSource={combinedMode} />
         )}
       </div>
 

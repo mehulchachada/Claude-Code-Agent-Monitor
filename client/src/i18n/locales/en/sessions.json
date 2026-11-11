@@ -82,6 +82,9 @@
     "hookOnlySession": "This Codex session ran without writing a rollout to disk (as with `codex exec --ephemeral`), so its history was reconstructed from lifecycle hooks. Prompts, tool calls, and replies are captured, but there is no full transcript to open.",
     "transcript": {
       "loadOlder": "↑ Load older messages",
+      "allAgents": "All agents (combined)",
+      "sourceMain": "Main agent",
+      "heldBack": "{{count}} older loaded messages are hidden until earlier history is loaded.",
       "filter": {
         "kindsLabel": "Filter by kind",
         "kindsAll": "All kinds",

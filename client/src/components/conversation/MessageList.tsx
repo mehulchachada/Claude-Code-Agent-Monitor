@@ -218,6 +218,8 @@ import {
   Cog,
 } from "lucide-react";
 import type { TranscriptMessage, TranscriptContent, TranscriptSender } from "../../lib/types";
+import type { SourcedMessage } from "../../lib/conversation-merge";
+import { useTranslation } from "react-i18next";
 
 /** Per-sender visual treatment for a transcript row. A JSONL `type:"user"` line
  *  is not always the human (tool results, harness task-notifications, the
@@ -279,6 +281,8 @@ interface MessageListProps {
   messages: TranscriptMessage[];
   /** Show the loading state instead of the list. */
   loading: boolean;
+  /** Show a chip naming the transcript each message came from (combined view). */
+  showSource?: boolean;
 }
 
 /** A persisted transcript attachment. Failed/expired local image references
@@ -523,7 +527,8 @@ function CollapsibleBlock({
  * tool calls with their results, and system notices. Thinking blocks start collapsed and are
  * tracked by message index.
  */
-export function MessageList({ messages, loading }: MessageListProps) {
+export function MessageList({ messages, loading, showSource }: MessageListProps) {
+  const { t } = useTranslation("sessions");
   const [expandedThinking, setExpandedThinking] = useState<Set<number>>(() => new Set());
 
   // Track which user messages are pure tool_result (no text) - we merge those into the preceding assistant message.
@@ -576,6 +581,7 @@ export function MessageList({ messages, loading }: MessageListProps) {
         const sender: TranscriptSender = msg.sender ?? (isAssistant ? "assistant" : "user");
         const style = SENDER_STYLES[sender] ?? SENDER_STYLES.user;
         const SenderIcon = style.icon;
+        const source = "source" in msg ? (msg as SourcedMessage).source : undefined;
 
         return (
           <div
@@ -596,6 +602,19 @@ export function MessageList({ messages, loading }: MessageListProps) {
                 <span className={`text-xs font-semibold tracking-wide ${style.headerText}`}>
                   {style.label}
                 </span>
+                {showSource && source && (
+                  <span
+                    data-testid="message-source"
+                    title={source.name}
+                    className={`text-[10px] px-1.5 py-0.5 rounded max-w-[220px] truncate ${
+                      source.type === "main"
+                        ? "bg-surface-3 text-gray-400"
+                        : "bg-amber-500/10 text-amber-400"
+                    }`}
+                  >
+                    {source.type === "main" ? t("detail.transcript.sourceMain") : source.name}
+                  </span>
+                )}
                 {msg.model && (
                   <span className="text-[10px] text-gray-400 font-mono bg-surface-3/60 border border-surface-3 rounded px-1.5 py-0.5">
                     {formatModelName(msg.model)}

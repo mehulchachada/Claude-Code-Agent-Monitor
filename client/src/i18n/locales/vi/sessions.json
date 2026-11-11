@@ -83,6 +83,9 @@
     "hookOnlySession": "Phiên Codex này chạy mà không ghi rollout xuống đĩa (như với `codex exec --ephemeral`), nên lịch sử được tái dựng từ các hook vòng đời. Prompt, lệnh gọi công cụ và phản hồi đều được ghi lại, nhưng không có transcript đầy đủ để mở.",
     "transcript": {
       "loadOlder": "↑ Tải các tin nhắn cũ hơn",
+      "allAgents": "Tất cả các tác tử (gộp)",
+      "sourceMain": "Tác tử chính",
+      "heldBack": "{{count}} tin nhắn cũ đã tải đang bị ẩn cho đến khi lịch sử trước đó được tải.",
       "filter": {
         "kindsLabel": "Lọc theo loại",
         "kindsAll": "Tất cả các loại",
