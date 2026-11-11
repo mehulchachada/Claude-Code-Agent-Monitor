@@ -94,6 +94,9 @@ describe("ConversationView combined view", () => {
     expect(screen.getByText("It is fixed")).toBeInTheDocument();
     // The sub-agent transcript is not loaded in single-transcript mode.
     expect(screen.queryByText("Qwen answer")).not.toBeInTheDocument();
+    // The picker lists the combined entry first, but an unset selection must still
+    // show the transcript that is on screen.
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("main");
     expect(container.querySelectorAll('[data-testid="message-source"]').length).toBe(0);
 
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "__all__" } });

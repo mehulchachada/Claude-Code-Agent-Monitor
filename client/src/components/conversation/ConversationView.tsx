@@ -660,7 +660,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
           {transcripts.length > 1 && (
             <div className="relative">
               <select
-                value={selectedTranscript || ""}
+                value={selectedTranscript ?? transcripts[0]?.id ?? ""}
                 onChange={(e) => setSelectedTranscript(e.target.value || null)}
                 className="appearance-none bg-surface-2 border border-surface-3 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-300 focus:outline-none focus:border-violet-500/50 hover:border-violet-500/30 cursor-pointer transition-colors"
               >

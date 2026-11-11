@@ -102,9 +102,9 @@ export function useCombinedTranscript(
   const transcriptsRef = useRef(transcripts);
   transcriptsRef.current = transcripts;
 
-  useEffect(() => {
-    windowsRef.current = windows;
-  }, [windows]);
+  // Kept current during render (not in an effect) so a loadOlder() or refresh()
+  // issued right after a state commit reads the windows that are on screen.
+  windowsRef.current = windows;
 
   useEffect(() => {
     aliveRef.current = true;
@@ -185,13 +185,19 @@ export function useCombinedTranscript(
       (info) => !loadedIdsRef.current.has(info.id) && !pendingIdsRef.current.has(info.id)
     );
     if (fresh.length === 0) return;
-    let cancelled = false;
+    // `transcripts` is a new array every few seconds. This request must not be
+    // tied to that identity: cancelling it on the next list refresh would leave
+    // its ids marked pending forever and the transcript would never load. Only
+    // a session change, disabling, or unmount makes the answer stale.
+    const session = sessionId;
+    const first = loadedIdsRef.current.size === 0;
     fresh.forEach((info) => pendingIdsRef.current.add(info.id));
+    if (first) setLoading(true);
     void (async () => {
       const results = await Promise.allSettled(
-        fresh.map((info) => api.sessions.transcript(sessionId, transcriptParams(info, {})))
+        fresh.map((info) => api.sessions.transcript(session, transcriptParams(info, {})))
       );
-      if (cancelled) return;
+      if (!aliveRef.current || sessionIdRef.current !== session || !enabledRef.current) return;
       const loaded = new Map<string, TranscriptWindow>();
       fresh.forEach((info, index) => {
         const result = results[index];
@@ -201,7 +207,12 @@ export function useCombinedTranscript(
           loadedIdsRef.current.add(info.id);
         }
       });
+      if (first) {
+        setLoading(false);
+        if (loaded.size === 0) setError("Failed to load transcripts");
+      }
       if (loaded.size === 0) return;
+      setError(null);
       setWindows((prev) => {
         const byId = new Map(prev.map((window) => [window.source.id, window]));
         const next: TranscriptWindow[] = [];
@@ -212,9 +223,6 @@ export function useCombinedTranscript(
         return next;
       });
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [transcripts, enabled, sessionId]);
 
   const refresh = useCallback(async () => {
@@ -237,17 +245,21 @@ export function useCombinedTranscript(
           if (!aliveRef.current || sessionIdRef.current !== session || !enabledRef.current) {
             return;
           }
-          const updated =
-            window.lastLine > 0
-              ? appendMessages(window, result)
-              : {
-                  ...window,
-                  messages: result.messages,
-                  firstLine: result.first_line,
-                  lastLine: result.last_line,
-                  hasMore: result.has_more,
-                };
-          setWindows((prev) => prev.map((w) => (w.source.id === window.source.id ? updated : w)));
+          const tail = window.lastLine > 0;
+          setWindows((prev) =>
+            prev.map((w) => {
+              if (w.source.id !== window.source.id) return w;
+              return tail
+                ? appendMessages(w, result)
+                : {
+                    ...w,
+                    messages: result.messages,
+                    firstLine: result.first_line,
+                    lastLine: result.last_line,
+                    hasMore: result.has_more,
+                  };
+            })
+          );
         })
       );
     };
@@ -278,8 +290,9 @@ export function useCombinedTranscript(
       if (!aliveRef.current || sessionIdRef.current !== session || !enabledRef.current) {
         return;
       }
-      const updated = prependMessages(window, result);
-      setWindows((prev) => prev.map((w) => (w.source.id === targetId ? updated : w)));
+      setWindows((prev) =>
+        prev.map((w) => (w.source.id === targetId ? prependMessages(w, result) : w))
+      );
     } finally {
       olderInFlightRef.current = false;
       if (aliveRef.current && sessionIdRef.current === session && enabledRef.current) {

@@ -229,4 +229,86 @@ describe("useCombinedTranscript", () => {
       mocks.transcript.mock.calls.filter((call) => call[1]?.agent_id === undefined).length
     ).toBe(1);
   });
+
+  it("keeps messages a refresh added while an older page was still loading", async () => {
+    let releaseOlder: (value: TranscriptResult) => void = () => {};
+    mocks.transcript.mockImplementation(
+      (_id: string, params?: { after?: number; before?: number }) => {
+        if (params?.before !== undefined) {
+          return new Promise<TranscriptResult>((resolve) => {
+            releaseOlder = resolve;
+          });
+        }
+        if (params?.after !== undefined) {
+          return Promise.resolve(result([msg("m3", "newer", "2026-08-01T10:03:00.000Z")], 3, 3));
+        }
+        return Promise.resolve(
+          result([msg("m2", "loaded", "2026-08-01T10:02:00.000Z")], 2, 2, true)
+        );
+      }
+    );
+    const { result: hook } = renderHook(() => useCombinedTranscript("s1", [main], true));
+    await waitFor(() => expect(hook.current.loading).toBe(false));
+
+    let older: Promise<void> = Promise.resolve();
+    act(() => {
+      older = hook.current.loadOlder();
+    });
+    await act(async () => {
+      await hook.current.refresh();
+    });
+    expect(hook.current.messages.map((m) => m.id)).toEqual(["m2", "m3"]);
+
+    await act(async () => {
+      releaseOlder(result([msg("m1", "older", "2026-08-01T10:01:00.000Z")], 1, 1, false));
+      await older;
+    });
+    expect(hook.current.messages.map((m) => m.id)).toEqual(["m1", "m2", "m3"]);
+  });
+
+  it("still loads a late transcript when the list is refreshed while it is loading", async () => {
+    let releaseSub: (value: TranscriptResult) => void = () => {};
+    mocks.transcript.mockImplementation((_id: string, params?: { agent_id?: string }) => {
+      if (params?.agent_id === "sub-1") {
+        return new Promise<TranscriptResult>((resolve) => {
+          releaseSub = resolve;
+        });
+      }
+      return Promise.resolve(result([msg("m1", "main", "2026-08-01T10:00:00.000Z")], 1, 1));
+    });
+    const { result: hook, rerender } = renderHook(
+      ({ list }: { list: TranscriptInfo[] }) => useCombinedTranscript("s1", list, true),
+      { initialProps: { list: [main] } }
+    );
+    await waitFor(() => expect(hook.current.loading).toBe(false));
+
+    rerender({ list: [main, sub] }); // the sub-agent appears: its page starts loading
+    rerender({ list: [{ ...main }, { ...sub }] }); // the caller polls the list again meanwhile
+    await act(async () => {
+      releaseSub(result([msg("m2", "sub", "2026-08-01T10:01:00.000Z")], 1, 1));
+    });
+    await waitFor(() => expect(hook.current.messages.map((m) => m.id)).toEqual(["m1", "m2"]));
+    // Loaded once: the refreshed list did not start a second request for it.
+    const subCalls = mocks.transcript.mock.calls.filter(
+      (call) => (call[1] as { agent_id?: string } | undefined)?.agent_id === "sub-1"
+    );
+    expect(subCalls).toHaveLength(1);
+  });
+
+  it("reports loading while the first transcripts arrive after the hook was enabled", async () => {
+    mocks.transcript.mockResolvedValue(
+      result([msg("m1", "main", "2026-08-01T10:00:00.000Z")], 1, 1)
+    );
+    const { result: hook, rerender } = renderHook(
+      ({ list }: { list: TranscriptInfo[] }) => useCombinedTranscript("s1", list, true),
+      { initialProps: { list: [] as TranscriptInfo[] } }
+    );
+    await act(async () => {});
+    expect(hook.current.messages).toEqual([]);
+
+    rerender({ list: [main] });
+    expect(hook.current.loading).toBe(true);
+    await waitFor(() => expect(hook.current.loading).toBe(false));
+    expect(hook.current.messages.map((m) => m.id)).toEqual(["m1"]);
+  });
 });
