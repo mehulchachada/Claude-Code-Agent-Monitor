@@ -838,7 +838,11 @@ const processEvent = db.transaction((hookType, data, origin = null) => {
 
     case "SubagentStop": {
       summary = `Subagent completed`;
-      const subagents = stmts.listAgentsBySession.all(sessionId);
+      // External runs (routes/external-runs.js) report their own end; a CLI
+      // SubagentStop must never be matched to one by the fallbacks below.
+      const subagents = stmts.listAgentsBySession
+        .all(sessionId)
+        .filter((a) => a.subagent_type !== "external");
       let matchingSub = null;
 
       // Try to identify which subagent stopped using available data.
@@ -2856,6 +2860,7 @@ router.post("/ingest-transcript", (req, res) => {
   }
 });
 
+router.processEvent = processEvent;
 router.transcriptCache = transcriptCache;
 router.watchdogCheck = watchdogCheck;
 router.livenessReap = livenessReap;

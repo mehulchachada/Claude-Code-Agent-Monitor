@@ -1370,6 +1370,87 @@ terminal session.
 
 ---
 
+### External Agent Runs
+
+`POST /api/hooks/external-run` records work done by an agent the dashboard does not
+integrate with natively - typically a local model (Ollama, llama.cpp, ...) driven by your
+own harness. The harness reports the run as it happens; the dashboard decides where it
+belongs:
+
+- **Under its orchestrating session.** When `parent_session_id` names a session this
+  dashboard knows, the run is filed as a subagent of that session (`agents.type =
+  'subagent'`, `subagent_type = 'external'`, parented to the session's main agent). Its tool
+  events land on the parent session's timeline attributed to that agent, and its
+  conversation is selectable in the parent's Conversation tab. No session row is created.
+- **Standalone.** With no `parent_session_id`, or one this dashboard does not know (for
+  example a session on another machine), the run becomes its own session. The unresolved
+  parent id is kept in `metadata.external.parent_session_id` so the UI can say where the run
+  was started from.
+
+Claude Code exports its session id to the commands it runs as `CLAUDE_CODE_SESSION_ID`, so
+a harness launched from a session can pass that value as `parent_session_id` without any
+configuration.
+
+Like the other `/api/hooks/*` ingestion paths it is exempt from `DASHBOARD_TOKEN` and
+honours `DASHBOARD_HOOK_TOKEN` when one is set.
+
+**Request body**
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `run_id` | string | Required. Stable id for the run: letters, digits, `.`, `_`, `-`; at most 80 characters. |
+| `event` | string | Required. `start`, `tool`, `message`, or `end`. Any event for a run the dashboard has not seen starts it first. |
+| `parent_session_id` | string | Optional. Session that orchestrated the run. Read when the run starts. |
+| `model`, `provider`, `title`, `origin`, `cwd` | string | Optional descriptors, read when the run starts. `origin` is the machine or tool that submitted the work. |
+| `prompt` | string | Optional, `start`. The task given to the agent. |
+| `phase` | string | `tool` only: `pre` (about to call) or `post` (finished; the default). |
+| `tool_name`, `tool_input`, `tool_response`, `is_error` | mixed | `tool` only. `tool_response` is truncated to 4,000 characters on the timeline event. |
+| `status`, `error` | string | `end` only. `status` is `ok` (default) or `error`. |
+| `transcript` | object[] | Optional on every event. Conversation lines to append, at most 500 per request. |
+
+Each `transcript` line is a Claude-style message object: `{ "type": "user" | "assistant" |
+"system", "message": { "content": ... }, "timestamp"?: ISO-8601 }`. Assistant content is an
+array of `thinking`, `text`, and `tool_use` blocks; a tool result is a `user` line whose
+content holds a `tool_result` block with the matching `tool_use_id`. The dashboard adds
+`uuid`, `sessionId`, `role`, and (for assistant lines without one) the run's `model`.
+
+Conversations are stored by the dashboard under
+`<data dir>/external-transcripts/<session id>/`. The endpoint never accepts a file path, so
+it cannot be used to make the dashboard read arbitrary files, and nothing is written into
+the CLI's own transcript directories.
+
+**Response** `200`
+
+```json
+{
+  "ok": true,
+  "started": true,
+  "mode": "child",
+  "session_id": "3f2a9c1e-7b4d-4e8a-9c10-5d6e7f8a9b0c",
+  "agent_id": "ext-demo-1",
+  "transcript_id": "ext-demo-1",
+  "appended": 1
+}
+```
+
+`mode` is `child` or `standalone`. For a standalone run `transcript_id` is `main` and
+`agent_id` is the new session's main agent. Malformed input returns `400 INVALID_INPUT`.
+
+```bash
+curl -s -X POST http://127.0.0.1:4820/api/hooks/external-run \
+  -H "Content-Type: application/json" \
+  -d '{"run_id":"demo-1","event":"start","model":"qwen3.8:27b","title":"Draft the rules",
+       "parent_session_id":"'"$CLAUDE_CODE_SESSION_ID"'",
+       "transcript":[{"type":"user","message":{"content":"Draft the rules"}}]}'
+```
+
+`GET /api/hooks/external-run/{run_id}` returns where a run was filed
+(`{ mode, session_id, agent_id, transcript_id }`) or `404`.
+
+A CLI `SubagentStop` in the parent session never closes an external agent: external runs
+report their own end. If the parent session's lifecycle sweep closes the agent while the run
+is still going, the next event from the run reopens it.
+
 ### Settings
 
 | Method | Path | Description |

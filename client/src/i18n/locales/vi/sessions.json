@@ -84,5 +84,11 @@
     "transcript": {
       "loadOlder": "↑ Tải các tin nhắn cũ hơn"
     }
+  },
+  "external": {
+    "badge": "Lượt chạy bên ngoài",
+    "standalone": "Lượt chạy độc lập: không có phiên nào trên bảng điều khiển này điều phối nó.",
+    "untrackedParent": "Được khởi chạy từ một phiên trên {{origin}} mà bảng điều khiển này không theo dõi.",
+    "untrackedParentNoOrigin": "Được khởi chạy từ một phiên mà bảng điều khiển này không theo dõi."
   }
 }

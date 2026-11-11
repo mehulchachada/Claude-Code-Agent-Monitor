@@ -43,6 +43,11 @@ const {
   isSafeCursorId,
   readCursorChatMetadata,
 } = require("../lib/cursor-home");
+const {
+  EXTERNAL_SUBAGENT_TYPE,
+  findExternalTranscript,
+  listExternalAgentTranscripts,
+} = require("../lib/external-runs");
 const { readCursorStoreMessages } = require("../lib/cursor-store-transcript");
 const { parseCursorMessage } = require("../lib/cursor-transcript");
 const {
@@ -750,7 +755,7 @@ router.get("/:id/transcripts", async (req, res) => {
     getTranscriptPath(req.params.id, session.cwd) ||
     findTranscriptPath(req.params.id) ||
     getSnapshotTranscriptPath(req.params.id);
-  if (mainPath && fs.existsSync(mainPath)) {
+  if ((mainPath && fs.existsSync(mainPath)) || findExternalTranscript(req.params.id, "main")) {
     // Main agent database ID format: <sessionId>-main
     const mainDbAgent = dbAgents.find((a) => a.type === "main");
     result.push({
@@ -931,6 +936,20 @@ router.get("/:id/transcripts", async (req, res) => {
     return (a.name || "").localeCompare(b.name || "");
   });
 
+  // External runs filed under this session. Added after the positional
+  // matching above: these carry their exact agent id, so nothing is guessed.
+  for (const externalId of listExternalAgentTranscripts(req.params.id)) {
+    const dbAgent = dbAgents.find((a) => a.id === externalId);
+    result.push({
+      id: externalId,
+      name: dbAgent ? dbAgent.name : externalId,
+      type: "subagent",
+      subagent_type: EXTERNAL_SUBAGENT_TYPE,
+      has_transcript: true,
+      db_agent_id: dbAgent ? dbAgent.id : null,
+    });
+  }
+
   res.json({ transcripts: result });
 });
 
@@ -1001,6 +1020,11 @@ function inlineClaudeImage(block) {
 
 /** Resolve only the exact transcript selected by the reader/image request. */
 function resolveSessionTranscriptPath(session, sessionId, agentId, runId) {
+  // External runs (routes/external-runs.js): the dashboard stores these
+  // conversations itself, for a standalone run's main agent or for an
+  // external agent filed under any provider's session.
+  const externalPath = findExternalTranscript(sessionId, agentId);
+  if (externalPath) return externalPath;
   if (session.provider === "codex") {
     return session.transcript_path && fs.existsSync(session.transcript_path)
       ? session.transcript_path

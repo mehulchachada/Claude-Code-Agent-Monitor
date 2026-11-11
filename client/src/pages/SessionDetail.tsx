@@ -293,6 +293,7 @@ import { AgentCard } from "../components/AgentCard";
 import { SessionOverview } from "../components/SessionOverview";
 import { TodoProgressPanel } from "../components/TodoProgressPanel";
 import { ConversationView } from "../components/conversation/ConversationView";
+import { externalRunInfo } from "../lib/external-run";
 import { SessionStatusBadge, AgentStatusBadge, REASON_ICONS } from "../components/StatusBadge";
 import { CopyButton } from "../components/event-views/primitives";
 import {
@@ -648,6 +649,11 @@ export function SessionDetail() {
   // disk, so the server rebuilds its history from the lifecycle hooks and marks
   // the session `hook_only`. Saying so is the honest alternative to the generic
   // "transcript not found" warning, which reads like something went wrong.
+  // A standalone external run (nothing on this dashboard orchestrated it). Runs
+  // that a session here did orchestrate never get a session of their own: they
+  // appear under that session's Agents tab instead.
+  const externalRun = useMemo(() => externalRunInfo(session?.metadata), [session?.metadata]);
+
   const hookOnly = useMemo(() => {
     if (!session?.metadata) return false;
     try {
@@ -926,6 +932,12 @@ export function SessionDetail() {
                 {formatModelName(session.model)}
               </span>
             )}
+            {externalRun && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
+                <Cpu className="w-3 h-3" />
+                {t("external.badge")}
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-surface-2 px-2 py-1 rounded">
               <Clock className="w-3 h-3 text-gray-500" />
               {formatDateTime(session.started_at)}
@@ -950,6 +962,15 @@ export function SessionDetail() {
               </span>
               <CopyButton text={session.cwd} />
             </div>
+          )}
+          {externalRun && (
+            <p className="text-xs text-gray-500 mt-2">
+              {externalRun.parent_session_id
+                ? externalRun.origin
+                  ? t("external.untrackedParent", { origin: externalRun.origin })
+                  : t("external.untrackedParentNoOrigin")
+                : t("external.standalone")}
+            </p>
           )}
         </div>
         <button onClick={load} className="btn-ghost">

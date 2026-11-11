@@ -2300,6 +2300,103 @@ function createOpenApiSpec() {
           },
         },
       },
+      "/api/hooks/external-run": {
+        post: {
+          tags: ["Hooks"],
+          summary: "Record an external agent run",
+          description:
+            "Reports work done by an agent the dashboard does not integrate natively (for example a local model driven by the user's own harness). Filed as a subagent of `parent_session_id` when that session is known here, otherwise as a standalone session. Conversation lines are stored by the dashboard; no file path is accepted.",
+          operationId: "recordExternalRun",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["run_id", "event"],
+                  properties: {
+                    run_id: {
+                      type: "string",
+                      maxLength: 80,
+                      pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                    },
+                    event: { type: "string", enum: ["start", "tool", "message", "end"] },
+                    parent_session_id: { type: "string", nullable: true },
+                    model: { type: "string" },
+                    provider: { type: "string" },
+                    title: { type: "string" },
+                    origin: { type: "string" },
+                    cwd: { type: "string" },
+                    prompt: { type: "string" },
+                    phase: { type: "string", enum: ["pre", "post"] },
+                    tool_name: { type: "string" },
+                    tool_input: { type: "object", additionalProperties: true },
+                    tool_response: { type: "string" },
+                    is_error: { type: "boolean" },
+                    status: { type: "string", enum: ["ok", "error"] },
+                    error: { type: "string" },
+                    transcript: {
+                      type: "array",
+                      maxItems: 500,
+                      items: { type: "object", additionalProperties: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Run recorded",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok", "mode", "session_id", "agent_id", "transcript_id"],
+                    properties: {
+                      ok: { type: "boolean" },
+                      started: { type: "boolean" },
+                      mode: { type: "string", enum: ["child", "standalone"] },
+                      session_id: { type: "string" },
+                      agent_id: { type: "string" },
+                      transcript_id: { type: "string" },
+                      appended: { type: "integer" },
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "Malformed request" },
+          },
+        },
+      },
+      "/api/hooks/external-run/{runId}": {
+        get: {
+          tags: ["Hooks"],
+          summary: "Locate an external agent run",
+          operationId: "locateExternalRun",
+          parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            200: {
+              description: "Where the run was filed",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      mode: { type: "string", enum: ["child", "standalone"] },
+                      session_id: { type: "string" },
+                      agent_id: { type: "string" },
+                      transcript_id: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+            404: { description: "Unknown run" },
+          },
+        },
+      },
       "/api/hooks/codex": {
         post: {
           tags: ["Hooks"],

@@ -341,6 +341,7 @@ flowchart LR
 | **Pre-Existing Session Detection** | 시작 가져오기는 최근 수정된 트랜스크립트를 active로 표시하고, 이후 Stop 이벤트는 가져온 completed 또는 abandoned 세션을 업데이트하기 전에 다시 활성화합니다. |
 | **Continuous Project Sync** | 즉시 시작 sweep, debounce filesystem watcher, 기본 30초인 `DASHBOARD_SESSION_SYNC_MS` poll이 mtime cache와 coalesced scan을 공유합니다. 새로 생겼거나 진행된 파일만 다시 파싱하며, Linux에 안전한 watcher 범위와 실시간 session broadcast를 사용합니다. |
 | **Remote Data Sources** | SSH source는 `scp` 또는 WSL `tar`를 통해 Claude와 Codex home을 독립적으로 mirror하고, `sessions.source`를 tag하며, lifecycle을 조정하고, 두 provider 중 하나라도 작동하면 healthy 상태를 유지합니다. Polling 기본값은 15초이며 stale fallback은 실패한 provider에만 적용됩니다. 인증 정보는 host SSH에 남습니다. |
+| **외부 에이전트 실행** | 대시보드가 기본적으로 통합하지 않는 에이전트(예: 직접 만든 하니스로 구동하는 로컬 모델)가 수행한 작업을 `POST /api/hooks/external-run`으로 보고합니다. 모니터링 중인 세션이 시작한 실행은 해당 세션 아래 서브에이전트로 기록되어 자체 대화와 타임라인 이벤트를 가지며, 어떤 세션도 조율하지 않은 실행은 **외부 실행**으로 표시된 독립 세션이 됩니다. 대화는 대시보드가 직접 저장하며 호출자가 제공한 경로에서 읽지 않습니다. |
 | **Remote Push Ingestion** | `POST /api/hooks/ingest-batch`는 NAT 뒤의 머신에서 세션 합계와 이벤트를 보내고, `POST /api/hooks/ingest-transcript`는 제목, 기록, token, Subagent 가져오기에 필요한 offset 검증 기반 main Agent 및 Subagent JSONL을 추가합니다. 두 route 모두 `REMOTE_PUSH_TOKEN` 또는 `REMOTE_PUSH_TOKEN_FILE`이 설정될 때까지 비활성 상태이며 query-string credential과 로컬 소유 세션을 거부합니다. `ingest-transcript`는 해당 route의 더 큰 parser가 실행되기 전에 인증합니다. |
 | **Responsive Design** | 모바일 레이아웃은 grid를 쌓고, 넓은 table을 scroll하며, navigation을 접습니다. |
 | **UI Localization** | 영어, 중국어, 베트남어, 한국어, 스페인어는 UI copy, accessibility label, workflow 설명과 tooltip, model-pricing 안내, provider home, Import History를 다룹니다. |

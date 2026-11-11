@@ -84,5 +84,11 @@
       "loadOlder": "↑ Load older messages"
     }
   },
-  "remoteSourceBadgeTitle": "Collected from a remote machine"
+  "remoteSourceBadgeTitle": "Collected from a remote machine",
+  "external": {
+    "badge": "External run",
+    "standalone": "Standalone run: no session on this dashboard orchestrated it.",
+    "untrackedParent": "Started from a session on {{origin}} that this dashboard does not track.",
+    "untrackedParentNoOrigin": "Started from a session that this dashboard does not track."
+  }
 }

@@ -84,5 +84,11 @@
     "transcript": {
       "loadOlder": "↑ 加载更早的消息"
     }
+  },
+  "external": {
+    "badge": "外部运行",
+    "standalone": "独立运行：此仪表板上没有会话编排它。",
+    "untrackedParent": "从 {{origin}} 上的会话启动，此仪表板未跟踪该会话。",
+    "untrackedParentNoOrigin": "从此仪表板未跟踪的会话启动。"
   }
 }

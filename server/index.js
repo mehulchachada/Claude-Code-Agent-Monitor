@@ -40,6 +40,7 @@ const agentsRouter = require("./routes/agents");
 const eventsRouter = require("./routes/events");
 const statsRouter = require("./routes/stats");
 const hooksRouter = require("./routes/hooks");
+const externalRunsRouter = require("./routes/external-runs");
 const analyticsRouter = require("./routes/analytics");
 const pricingRouter = require("./routes/pricing");
 const settingsRouter = require("./routes/settings");
@@ -88,6 +89,7 @@ function createApp() {
   app.use("/api/agents", agentsRouter);
   app.use("/api/events", eventsRouter);
   app.use("/api/stats", statsRouter);
+  app.use("/api/hooks/external-run", externalRunsRouter);
   app.use("/api/hooks", hooksRouter);
   app.use("/api/analytics", analyticsRouter);
   app.use("/api/pricing", pricingRouter);

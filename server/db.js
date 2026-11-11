@@ -1861,6 +1861,14 @@ const stmts = {
   // so the broadcast/refresh path stays quiet across the common no-op case.
   // Used by the hook ingestor to keep the displayed model in sync after the
   // user invokes /model mid-session.
+  // Whole-value metadata writes for rows the dashboard itself annotates (external
+  // runs). Callers merge with the existing JSON first; see routes/external-runs.js.
+  setSessionMetadata: db.prepare(
+    "UPDATE sessions SET metadata = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?"
+  ),
+  setAgentMetadata: db.prepare(
+    "UPDATE agents SET metadata = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?"
+  ),
   updateSessionModel: db.prepare(
     "UPDATE sessions SET model = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND COALESCE(model, '') != ?"
   ),
@@ -2021,6 +2029,7 @@ const stmts = {
     FROM agent_depth ad
     JOIN agents a ON a.id = ad.id
     WHERE a.status = 'working' AND a.type = 'subagent'
+      AND COALESCE(a.subagent_type, '') <> 'external'
     ORDER BY ad.depth DESC, a.started_at DESC
     LIMIT 1
   `),

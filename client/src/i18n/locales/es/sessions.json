@@ -84,5 +84,11 @@
       "loadOlder": "↑ Cargar mensajes anteriores"
     }
   },
-  "remoteSourceBadgeTitle": "Recopilado desde una máquina remota"
+  "remoteSourceBadgeTitle": "Recopilado desde una máquina remota",
+  "external": {
+    "badge": "Ejecución externa",
+    "standalone": "Ejecución independiente: ninguna sesión de este panel la orquestó.",
+    "untrackedParent": "Iniciada desde una sesión en {{origin}} que este panel no registra.",
+    "untrackedParentNoOrigin": "Iniciada desde una sesión que este panel no registra."
+  }
 }

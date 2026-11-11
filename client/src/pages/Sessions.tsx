@@ -231,6 +231,7 @@
 import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { externalRunInfo } from "../lib/external-run";
 import {
   FolderOpen,
   Search,
@@ -736,6 +737,11 @@ export function Sessions() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-200">
                             {session.name || `${t("defaultName")}${session.id.slice(0, 8)}`}
+                            {externalRunInfo(session.metadata) && (
+                              <span className="ml-2 align-middle text-[10px] font-medium uppercase tracking-wide text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                                {t("external.badge")}
+                              </span>
+                            )}
                           </p>
                           <p className="text-[11px] text-gray-600 font-mono">
                             {session.id.slice(0, 12)}

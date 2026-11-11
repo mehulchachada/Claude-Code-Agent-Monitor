@@ -197,6 +197,7 @@ import { AgentStatusBadge } from "./StatusBadge";
 import { TodoProgressIndicator } from "./TodoProgressIndicator";
 import { effectiveAgentStatus, isAgentAwaitingInput, agentAwaitingReason } from "../lib/types";
 import type { Agent, Session } from "../lib/types";
+import { externalRunInfo } from "../lib/external-run";
 import { formatDuration, timeAgo, formatModelName, pathBasename, fmtCost } from "../lib/format";
 
 /** Keep a compact card's history legible: at most two distinct human turns,
@@ -301,8 +302,19 @@ export function AgentCard({
     : sessionName;
   const isCodexMain = isMain && session?.provider === "codex" && agent.name.trim() === "Codex";
   const isCursorMain = isMain && session?.provider === "cursor";
+  // External runs (a local model driven by the user's own harness) are labelled
+  // as such instead of borrowing a CLI's name: as a subagent under the session
+  // that orchestrated them, or as the main agent of a standalone run.
+  const external =
+    externalRunInfo(agent.metadata) ?? (isMain ? externalRunInfo(session?.metadata) : null);
+  const externalLabel = external
+    ? external.origin
+      ? t("kanban:external.labelFrom", { origin: external.origin })
+      : t("kanban:external.label")
+    : null;
   const isClaudeMain =
     isMain &&
+    !external &&
     session?.provider !== "cursor" &&
     session?.provider !== "codex" &&
     /^Main Agent(?:\s*-|$)/i.test(agent.name.trim());
@@ -316,7 +328,9 @@ export function AgentCard({
       ? "Cursor"
       : isClaudeMain
         ? "Claude Code"
-        : null;
+        : isMain && externalLabel
+          ? externalLabel
+          : null;
   const displayName = providerLabel ? realSessionName || t("session.anonymous") : agent.name;
   // Session titles and requests are intentionally independent: Claude,
   // Cursor, and Codex persist two recent real human turns on the session, while a
@@ -373,7 +387,7 @@ export function AgentCard({
       ]
         .filter(Boolean)
         .join(" · ") || null
-    : [label || agent.subagent_type, cwdBase].filter(Boolean).join(" · ") || null;
+    : [externalLabel || label || agent.subagent_type, cwdBase].filter(Boolean).join(" · ") || null;
 
   function handleClick() {
     if (onClick) {
@@ -400,10 +414,20 @@ export function AgentCard({
         <div className="flex items-start gap-2.5 min-w-0 overflow-hidden">
           <div
             className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${
-              isMain ? "bg-accent/15 text-accent" : "bg-violet-500/15 text-violet-400"
+              external
+                ? "bg-amber-500/15 text-amber-400"
+                : isMain
+                  ? "bg-accent/15 text-accent"
+                  : "bg-violet-500/15 text-violet-400"
             }`}
           >
-            {isMain ? <Bot className="w-3.5 h-3.5" /> : <GitBranch className="w-3.5 h-3.5" />}
+            {external ? (
+              <Cpu className="w-3.5 h-3.5" />
+            ) : isMain ? (
+              <Bot className="w-3.5 h-3.5" />
+            ) : (
+              <GitBranch className="w-3.5 h-3.5" />
+            )}
           </div>
           <div className="min-w-0 overflow-hidden">
             {/* Wraps to at most three lines (long unbroken tokens such as

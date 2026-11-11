@@ -934,6 +934,22 @@ curl http://localhost:4820/api/sessions
 
 ---
 
+## External Agent Runs
+
+Work done by an agent that emits no hooks at all - a local model behind your own harness -
+can be reported to `POST /api/hooks/external-run` (see [API.md](./API.md#external-agent-runs)).
+Two details matter to hook processing:
+
+- An external run filed under a session is a subagent with `subagent_type = 'external'`.
+  `SubagentStop` matching and the "deepest working agent" parent inference both skip such
+  agents, so a CLI subagent finishing can never be mistaken for the external run finishing,
+  and a CLI subagent is never parented to one.
+- External runs report their own end. A `Stop` or `SessionEnd` sweep in the parent session
+  may still mark the agent completed; the next event from the run reopens it.
+
+No new hook type or event type is introduced: tool activity is recorded as `PreToolUse` /
+`PostToolUse`, the start as a `Notification`, and the end as `SubagentStop`.
+
 ## Summary
 
 The hook system provides:
