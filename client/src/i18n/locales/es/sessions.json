@@ -109,6 +109,22 @@
           "error": "Errores",
           "system": "Salida del sistema"
         }
+      },
+      "digest": {
+        "view": "Resumen",
+        "list": "Lista",
+        "prompt": "Indicación",
+        "noPrompt": "(sin indicación)",
+        "reply": "Respuesta",
+        "tools": "llamadas a herramientas",
+        "thinking": "razonamiento",
+        "errors": "errores",
+        "agents": "agentes",
+        "messages": "mensajes",
+        "turns": "{{count}} turnos",
+        "searchPlaceholder": "Buscar turnos…",
+        "searchLabel": "Buscar turnos",
+        "noMatch": "Ningún turno coincide con la búsqueda."
       }
     }
   },

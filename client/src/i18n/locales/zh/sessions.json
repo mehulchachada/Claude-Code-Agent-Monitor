@@ -110,6 +110,22 @@
           "error": "错误",
           "system": "系统输出"
         }
+      },
+      "digest": {
+        "view": "摘要",
+        "list": "列表",
+        "prompt": "提示",
+        "noPrompt": "（无提示）",
+        "reply": "回复",
+        "tools": "工具调用",
+        "thinking": "思考",
+        "errors": "错误",
+        "agents": "代理",
+        "messages": "条消息",
+        "turns": "{{count}} 轮",
+        "searchPlaceholder": "搜索回合…",
+        "searchLabel": "搜索回合",
+        "noMatch": "没有回合匹配您的搜索。"
       }
     }
   },

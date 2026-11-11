@@ -201,11 +201,23 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Filter, Loader2, ArrowDown, MessagesSquare, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  Filter,
+  Loader2,
+  ArrowDown,
+  MessagesSquare,
+  RefreshCw,
+  List,
+  Layers,
+  Search,
+} from "lucide-react";
 import { api } from "../../lib/api";
 import { eventBus } from "../../lib/eventBus";
 import { isRemoteDataRefreshMessage } from "../../lib/remoteDataEvents";
 import { MessageList } from "./MessageList";
+import { TurnDigest } from "./TurnDigest";
+import { groupIntoTurns, filterTurns } from "../../lib/conversation-turns";
 import { useCombinedTranscript } from "../../lib/useCombinedTranscript";
 import { MultiSelect } from "../MultiSelect";
 import { formatModelName } from "../../lib/format";
@@ -270,6 +282,10 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   // Content filter. It narrows what is drawn from the messages already loaded;
   // it never changes what is fetched, so paging and live updates are untouched.
   const [filter, setFilter] = useState<ConversationFilter>(EMPTY_CONVERSATION_FILTER);
+  // "list" is the classic flat transcript; "digest" groups it into turns.
+  const [viewMode, setViewMode] = useState<"list" | "digest">("list");
+  // Free-text search over the digest turns (prompt, reply, tool names, message text).
+  const [turnQuery, setTurnQuery] = useState("");
   const filterActive = isConversationFilterActive(filter);
   // What is shown when nothing has been picked: every agent together when the session has
   // more than one transcript, otherwise the main transcript.
@@ -290,6 +306,11 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     () => filterConversation(viewMessages, filter),
     [viewMessages, filter]
   );
+  // Turns for the digest view, derived from the same filtered stream the list
+  // renders, so both views always show exactly the same messages.
+  const turns = useMemo(() => groupIntoTurns(shownMessages), [shownMessages]);
+  // Turns narrowed by the digest search box; empty query shows everything.
+  const visibleTurns = useMemo(() => filterTurns(turns, turnQuery), [turns, turnQuery]);
 
   // Track JSONL line numbers for incremental requests and history loading
   const lastLineRef = useRef(0);
@@ -689,6 +710,44 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
             <MessagesSquare className="w-3 h-3" />
             {shownTotal} message{shownTotal !== 1 ? "s" : ""}
           </span>
+          {/* View toggle: flat list vs. turn digest */}
+          <div
+            className="inline-flex items-center rounded-md border border-surface-3 overflow-hidden"
+            role="group"
+            aria-label="Conversation view"
+            data-testid="view-toggle"
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              aria-pressed={viewMode === "list"}
+              title={t("detail.transcript.digest.list")}
+              data-testid="view-mode-list"
+              className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 transition-colors ${
+                viewMode === "list"
+                  ? "bg-violet-500/20 text-violet-200"
+                  : "bg-surface-2 text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              <List className="w-3 h-3" />
+              {t("detail.transcript.digest.list")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("digest")}
+              aria-pressed={viewMode === "digest"}
+              title={t("detail.transcript.digest.view")}
+              data-testid="view-mode-digest"
+              className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 transition-colors border-l border-surface-3 ${
+                viewMode === "digest"
+                  ? "bg-violet-500/20 text-violet-200"
+                  : "bg-surface-2 text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              <Layers className="w-3 h-3" />
+              {t("detail.transcript.digest.view")}
+            </button>
+          </div>
           <button
             type="button"
             onClick={refresh}
@@ -852,6 +911,34 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
           <p className="py-12 text-center text-sm text-gray-400">
             {t("detail.transcript.filter.noMatch")}
           </p>
+        ) : viewMode === "digest" ? (
+          <div className="px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <div className="relative flex-1 min-w-[180px] max-w-sm">
+                <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="search"
+                  value={turnQuery}
+                  onChange={(e) => setTurnQuery(e.target.value)}
+                  placeholder={t("detail.transcript.digest.searchPlaceholder")}
+                  aria-label={t("detail.transcript.digest.searchLabel")}
+                  data-testid="digest-search"
+                  className="w-full bg-surface-2 border border-surface-3 rounded-lg pl-8 pr-3 py-1.5 text-sm text-gray-300 placeholder:text-gray-500 focus:outline-none focus:border-violet-500/50"
+                />
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 font-mono bg-surface-2 border border-surface-3 rounded-md px-2 py-1">
+                <Layers className="w-3 h-3" />
+                {t("detail.transcript.digest.turns", { count: visibleTurns.length })}
+              </span>
+            </div>
+            {visibleTurns.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-400">
+                {t("detail.transcript.digest.noMatch")}
+              </p>
+            ) : (
+              <TurnDigest turns={visibleTurns} showSource={combinedMode} />
+            )}
+          </div>
         ) : (
           <MessageList messages={shownMessages} loading={false} showSource={combinedMode} />
         )}

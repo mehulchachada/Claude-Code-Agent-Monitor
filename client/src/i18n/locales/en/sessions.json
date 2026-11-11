@@ -109,6 +109,22 @@
           "error": "Errors",
           "system": "System output"
         }
+      },
+      "digest": {
+        "view": "Digest",
+        "list": "List",
+        "prompt": "Prompt",
+        "noPrompt": "(no prompt)",
+        "reply": "Reply",
+        "tools": "tool calls",
+        "thinking": "thinking",
+        "errors": "errors",
+        "agents": "agents",
+        "messages": "messages",
+        "turns": "{{count}} turns",
+        "searchPlaceholder": "Search turns…",
+        "searchLabel": "Search turns",
+        "noMatch": "No turns match your search."
       }
     }
   },

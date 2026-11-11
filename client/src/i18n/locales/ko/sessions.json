@@ -110,6 +110,22 @@
           "error": "오류",
           "system": "시스템 출력"
         }
+      },
+      "digest": {
+        "view": "요약",
+        "list": "목록",
+        "prompt": "프롬프트",
+        "noPrompt": "(프롬프트 없음)",
+        "reply": "응답",
+        "tools": "도구 호출",
+        "thinking": "사고",
+        "errors": "오류",
+        "agents": "에이전트",
+        "messages": "메시지",
+        "turns": "턴 {{count}}개",
+        "searchPlaceholder": "턴 검색…",
+        "searchLabel": "턴 검색",
+        "noMatch": "검색과 일치하는 턴이 없습니다."
       }
     }
   },

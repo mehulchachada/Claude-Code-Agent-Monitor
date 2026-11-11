@@ -110,6 +110,22 @@
           "error": "Lỗi",
           "system": "Đầu ra hệ thống"
         }
+      },
+      "digest": {
+        "view": "Tóm tắt",
+        "list": "Danh sách",
+        "prompt": "Lời nhắc",
+        "noPrompt": "(không có lời nhắc)",
+        "reply": "Phản hồi",
+        "tools": "lệnh gọi công cụ",
+        "thinking": "suy nghĩ",
+        "errors": "lỗi",
+        "agents": "agent",
+        "messages": "tin nhắn",
+        "turns": "{{count}} lượt",
+        "searchPlaceholder": "Tìm kiếm lượt…",
+        "searchLabel": "Tìm kiếm lượt",
+        "noMatch": "Không có lượt nào khớp với tìm kiếm."
       }
     }
   },
