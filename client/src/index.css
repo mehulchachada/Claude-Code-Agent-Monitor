@@ -11,6 +11,10 @@
 @layer base {
   * {
     scrollbar-width: thin;
+    scrollbar-color: #c4c4d8 #f1f1f7;
+  }
+
+  .dark * {
     scrollbar-color: #2a2a3d #0c0c14;
   }
 
@@ -20,15 +24,27 @@
   }
 
   *::-webkit-scrollbar-track {
+    background: #f1f1f7;
+  }
+
+  .dark *::-webkit-scrollbar-track {
     background: #0c0c14;
   }
 
   *::-webkit-scrollbar-thumb {
-    background: #2a2a3d;
+    background: #c4c4d8;
     border-radius: 3px;
   }
 
+  .dark *::-webkit-scrollbar-thumb {
+    background: #2a2a3d;
+  }
+
   *::-webkit-scrollbar-thumb:hover {
+    background: #a8a8c4;
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
     background: #363650;
   }
 
@@ -51,6 +67,65 @@
   .time-input-custom::-webkit-calendar-picker-indicator {
     display: none;
     -webkit-appearance: none;
+  }
+
+  /*
+   * Light-mode text defaults. The dashboard was written for a dark surface:
+   * gray-100..600 text on dark cards. In light mode those same utilities must
+   * flip to darker grays so text stays readable on the light surfaces. The
+   * `dark:` values below are the exact Tailwind palette colors, so dark mode
+   * renders byte-for-byte as before.
+   */
+  .text-gray-100 {
+    color: #111827;
+  }
+  .dark .text-gray-100 {
+    color: #f3f4f6;
+  }
+  .text-gray-200 {
+    color: #1f2937;
+  }
+  .dark .text-gray-200 {
+    color: #e5e7eb;
+  }
+  .text-gray-300 {
+    color: #374151;
+  }
+  .dark .text-gray-300 {
+    color: #d1d5db;
+  }
+  .text-gray-400 {
+    color: #4b5563;
+  }
+  .dark .text-gray-400 {
+    color: #9ca3af;
+  }
+  .text-gray-500 {
+    color: #6b7280;
+  }
+  .dark .text-gray-500 {
+    color: #6b7280;
+  }
+  .text-gray-600 {
+    color: #9ca3af;
+  }
+  .dark .text-gray-600 {
+    color: #4b5563;
+  }
+
+  /* Borders: the border token already flips via the config; keep the
+     explicit `border-border` / `border-border-light` utilities in sync. */
+  .border-border {
+    border-color: #d9d9e6;
+  }
+  .dark .border-border {
+    border-color: #2a2a3d;
+  }
+  .border-border-light {
+    border-color: #c4c4d8;
+  }
+  .dark .border-border-light {
+    border-color: #363650;
   }
 }
 

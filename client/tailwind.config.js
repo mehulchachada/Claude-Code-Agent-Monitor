@@ -1,31 +1,46 @@
 /**
  * @file tailwind.config.js
- * @description Tailwind CSS configuration — content globs and the dashboard's dark-theme design tokens.
+ * @description Tailwind CSS configuration — content globs and the dashboard's theme-aware design tokens.
+ * Surface, border and gray colours are CSS variables (defined in index.css) so the same
+ * utilities render light in light mode and dark in dark mode without touching components.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
         surface: {
-          0: "#06060a",
-          1: "#0c0c14",
-          2: "#13131e",
-          3: "#1a1a28",
-          4: "#222233",
-          5: "#2a2a3d",
+          0: "var(--surface-0)",
+          1: "var(--surface-1)",
+          2: "var(--surface-2)",
+          3: "var(--surface-3)",
+          4: "var(--surface-4)",
+          5: "var(--surface-5)",
         },
         border: {
-          DEFAULT: "#2a2a3d",
-          light: "#363650",
+          DEFAULT: "var(--border)",
+          light: "var(--border-light)",
         },
         accent: {
           DEFAULT: "#6366f1",
-          hover: "#818cf8",
-          muted: "rgba(99, 102, 241, 0.15)",
+          hover: "#4f46e5",
+          muted: "rgba(99, 102, 241, 0.12)",
+        },
+        gray: {
+          50: "var(--gray-50)",
+          100: "var(--gray-100)",
+          200: "var(--gray-200)",
+          300: "var(--gray-300)",
+          400: "var(--gray-400)",
+          500: "var(--gray-500)",
+          600: "var(--gray-600)",
+          700: "var(--gray-700)",
+          800: "var(--gray-800)",
+          900: "var(--gray-900)",
         },
       },
       fontFamily: {
@@ -33,7 +48,7 @@ export default {
         mono: ["JetBrains Mono", "Fira Code", "Consolas", "monospace"],
       },
       animation: {
-        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.2, 1) infinite",
         "fade-in": "fadeIn 0.3s ease-out",
         "slide-up": "slideUp 0.3s ease-out",
       },

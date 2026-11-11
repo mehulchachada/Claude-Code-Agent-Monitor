@@ -272,6 +272,9 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
+  Moon,
+  Sun,
+  Monitor,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { api } from "../lib/api";
@@ -279,6 +282,8 @@ import { eventBus } from "../lib/eventBus";
 import type { UpdateStatusPayload, WSMessage } from "../lib/types";
 import { Select } from "./Select";
 import { UPDATE_CHECK_EVENT } from "../lib/appEvents";
+import { useTheme } from "../hooks/useTheme";
+import type { ThemeMode } from "../hooks/useTheme";
 
 /**
  * Type guard for an `update_status` WebSocket payload.
@@ -594,6 +599,38 @@ function CollapsedLanguagePicker({
   );
 }
 
+/** Props for {@link ThemeToggleCollapsed}. */
+interface ThemeToggleCollapsedProps {
+  /** Current theme preference. */
+  preference: ThemeMode;
+  /** Called with the chosen preference. */
+  onChange: (preference: ThemeMode) => void;
+  /** Accessible label for the trigger button. */
+  label: string;
+}
+
+/**
+ * Compact theme switcher for the collapsed sidebar rail. Cycles through
+ * system → light → dark on each click, showing the current mode's icon.
+ */
+function ThemeToggleCollapsed({ preference, onChange, label }: ThemeToggleCollapsedProps) {
+  const order: ThemeMode[] = ["system", "light", "dark"];
+  const next = order[(order.indexOf(preference) + 1) % order.length]!;
+  const Icon = preference === "light" ? Sun : preference === "dark" ? Moon : Monitor;
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={() => onChange(next)}
+      className="flex h-10 w-full items-center justify-center rounded-lg border border-border bg-surface-2 text-gray-400 transition-colors hover:bg-surface-3 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent/30"
+    >
+      <Icon className="h-4 w-4" aria-hidden />
+    </button>
+  );
+}
+
 /**
  * App sidebar: primary navigation (with overflow chevrons when items are clipped), the language
  * switcher, the connection indicator, and the update notifier.
@@ -606,6 +643,12 @@ function CollapsedLanguagePicker({
  */
 export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
   const { t, i18n } = useTranslation();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const themeOptions: Array<{ value: ThemeMode; label: string }> = [
+    { value: "system", label: t("nav:themeSystem") },
+    { value: "light", label: t("nav:themeLight") },
+    { value: "dark", label: t("nav:themeDark") },
+  ];
   const websiteLabel = "sonnguyenhoang.com";
   // Track whether nav items are clipped by overflow so we can render
   // chevron affordances pointing toward the hidden items. Recomputed on
@@ -937,6 +980,26 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
                 onChange={changeLanguage}
                 options={languageOptions}
               />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Theme controls */}
+      <div className="px-2 pb-2 flex-shrink-0">
+        {collapsed ? (
+          <ThemeToggleCollapsed
+            preference={themeMode}
+            onChange={setThemeMode}
+            label={t("nav:theme")}
+          />
+        ) : (
+          <div className="rounded-lg border border-border bg-surface-2 p-2">
+            <p className="px-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+              {t("nav:theme")}
+            </p>
+            <div className="mt-2">
+              <Select<ThemeMode> value={themeMode} onChange={setThemeMode} options={themeOptions} />
             </div>
           </div>
         )}
