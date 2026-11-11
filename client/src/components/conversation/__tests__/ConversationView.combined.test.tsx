@@ -1,30 +1,20 @@
 /**
  * @file ConversationView.combined.test.tsx
- * @description Verifies the combined view of the Conversation tab: choosing
- * "All agents" merges every transcript in time order, tags each row with its
- * source, and never asks the server for a transcript named after the picker value.
+ * @description Verifies the combined view of the Conversation tab: it is the
+ * default when a session has more than one transcript, merges every transcript
+ * in time order with source chips, and never asks the server for a transcript
+ * named after the picker value.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-const mocks = vi.hoisted(() => ({ transcript: vi.fn() }));
+const mocks = vi.hoisted(() => ({ transcript: vi.fn(), transcripts: vi.fn() }));
 
 vi.mock("../../../lib/api", () => ({
   api: {
     sessions: {
-      transcripts: vi.fn().mockResolvedValue({
-        transcripts: [
-          { id: "main", name: "Main Agent", type: "main", has_transcript: true },
-          {
-            id: "ext-job-1",
-            name: "Draft the rules",
-            type: "subagent",
-            subagent_type: "external",
-            has_transcript: true,
-          },
-        ],
-      }),
+      transcripts: mocks.transcripts,
       transcript: mocks.transcript,
     },
   },
@@ -35,6 +25,15 @@ vi.mock("../../../lib/eventBus", () => ({
 }));
 
 import { ConversationView } from "../ConversationView";
+
+const mainEntry = { id: "main", name: "Main Agent", type: "main", has_transcript: true };
+const subEntry = {
+  id: "ext-job-1",
+  name: "Draft the rules",
+  type: "subagent",
+  subagent_type: "external",
+  has_transcript: true,
+};
 
 const mainResult = {
   messages: [
@@ -81,25 +80,21 @@ function mockTranscript() {
   });
 }
 
+function renderView(props: { initialTranscriptId?: string } = {}) {
+  return render(<ConversationView sessionId="combined-session" {...props} />);
+}
+
 afterEach(() => {
   mocks.transcript.mockReset();
+  mocks.transcripts.mockReset();
 });
 
 describe("ConversationView combined view", () => {
-  it("merges every transcript in order with source chips", async () => {
+  it("shows the combined view by default when there are two transcripts", async () => {
+    mocks.transcripts.mockResolvedValue({ transcripts: [mainEntry, subEntry] });
     mockTranscript();
 
-    const { container } = render(<ConversationView sessionId="combined-session" />);
-    await screen.findByText("Fix the bug");
-    expect(screen.getByText("It is fixed")).toBeInTheDocument();
-    // The sub-agent transcript is not loaded in single-transcript mode.
-    expect(screen.queryByText("Qwen answer")).not.toBeInTheDocument();
-    // The picker lists the combined entry first, but an unset selection must still
-    // show the transcript that is on screen.
-    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("main");
-    expect(container.querySelectorAll('[data-testid="message-source"]').length).toBe(0);
-
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "__all__" } });
+    const { container } = renderView();
     await screen.findByText("Qwen answer");
 
     const prompt = screen.getByText("Fix the bug");
@@ -109,12 +104,64 @@ describe("ConversationView combined view", () => {
     expect(prompt.compareDocumentPosition(qwen) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(qwen.compareDocumentPosition(claude) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
+    // The picker reflects what is on screen: the combined entry.
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("__all__");
+
     // Every message in the combined view carries a source chip.
     expect(
       container.querySelectorAll('[data-testid="message-source"]').length
     ).toBeGreaterThanOrEqual(1);
 
     // The single-transcript loader must never be asked for the picker sentinel.
+    for (const call of mocks.transcript.mock.calls) {
+      expect(call[1]?.agent_id).not.toBe("__all__");
+    }
+  });
+
+  it("does not load the main transcript before the default is known", async () => {
+    mocks.transcripts.mockResolvedValue({ transcripts: [mainEntry, subEntry] });
+    mockTranscript();
+
+    renderView();
+    await screen.findByText("Qwen answer");
+
+    // Exactly one main-transcript request: the combined view's own load of main.
+    // A wasted pre-default load would make this two.
+    const mainLoads = mocks.transcript.mock.calls.filter((call) => call[1]?.agent_id == null);
+    expect(mainLoads.length).toBe(1);
+  });
+
+  it("lets an explicit picker choice win over the combined default", async () => {
+    mocks.transcripts.mockResolvedValue({ transcripts: [mainEntry, subEntry] });
+    mockTranscript();
+
+    const { container } = renderView();
+    await screen.findByText("Qwen answer");
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "main" } });
+    await waitFor(() => expect(screen.queryByText("Qwen answer")).not.toBeInTheDocument());
+    expect(screen.getByText("It is fixed")).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-testid="message-source"]').length).toBe(0);
+  });
+
+  it("honours initialTranscriptId over the combined default", async () => {
+    mocks.transcripts.mockResolvedValue({ transcripts: [mainEntry, subEntry] });
+    mockTranscript();
+
+    renderView({ initialTranscriptId: "ext-job-1" });
+    await screen.findByText("Qwen answer");
+    expect(screen.queryByText("It is fixed")).not.toBeInTheDocument();
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("ext-job-1");
+  });
+
+  it("shows the main transcript by default when there is only one", async () => {
+    mocks.transcripts.mockResolvedValue({ transcripts: [mainEntry] });
+    mockTranscript();
+
+    const { container } = renderView();
+    await screen.findByText("It is fixed");
+    expect(screen.queryByText("Qwen answer")).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-testid="message-source"]').length).toBe(0);
     for (const call of mocks.transcript.mock.calls) {
       expect(call[1]?.agent_id).not.toBe("__all__");
     }

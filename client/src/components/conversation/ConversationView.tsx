@@ -265,12 +265,19 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transcripts, setTranscripts] = useState<TranscriptInfo[]>([]);
+  const [transcriptsLoaded, setTranscriptsLoaded] = useState(false);
   const [showNewMsg, setShowNewMsg] = useState(false);
   // Content filter. It narrows what is drawn from the messages already loaded;
   // it never changes what is fetched, so paging and live updates are untouched.
   const [filter, setFilter] = useState<ConversationFilter>(EMPTY_CONVERSATION_FILTER);
   const filterActive = isConversationFilterActive(filter);
-  const combinedMode = selectedTranscript === ALL_AGENTS;
+  // What is shown when nothing has been picked: every agent together when the session has
+  // more than one transcript, otherwise the main transcript.
+  const activeTranscript = selectedTranscript ?? (transcripts.length > 1 ? ALL_AGENTS : null);
+  // Nothing picked and the list not loaded yet: wait, so the main transcript is not loaded
+  // only to be replaced by the combined view a moment later.
+  const awaitingDefault = selectedTranscript === null && !transcriptsLoaded;
+  const combinedMode = activeTranscript === ALL_AGENTS;
   const combined = useCombinedTranscript(sessionId, transcripts, combinedMode);
   const viewMessages: TranscriptMessage[] = combinedMode ? combined.messages : messages;
   const viewLoading = combinedMode ? combined.loading : loading;
@@ -307,14 +314,17 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   // Load available transcript list (also rescanned on a short interval so
   // newly-spawned subagents appear in the dropdown without a page reload).
   useEffect(() => {
+    setTranscriptsLoaded(false);
     let cancelled = false;
     async function loadTranscripts() {
       try {
         const result = await api.sessions.transcripts(sessionId);
         if (cancelled) return;
         setTranscripts(result.transcripts);
+        setTranscriptsLoaded(true);
       } catch {
-        // Non-fatal
+        // Non-fatal - still unblock the default so the tab does not wait forever.
+        if (!cancelled) setTranscriptsLoaded(true);
       }
     }
     loadTranscripts();
@@ -334,6 +344,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
 
   // Initial load: fetch the latest N messages
   useEffect(() => {
+    if (awaitingDefault) return;
     if (combinedMode) {
       setMessages([]);
       setTotal(0);
@@ -350,7 +361,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
         setLoading(true);
         setShowNewMsg(false);
         const result = await api.sessions.transcript(sessionId, {
-          agent_id: selectedTranscript || undefined,
+          agent_id: activeTranscript || undefined,
           limit: 50,
         });
         if (cancelled) return;
@@ -374,7 +385,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     return () => {
       cancelled = true;
     };
-  }, [sessionId, selectedTranscript, combinedMode]);
+  }, [sessionId, activeTranscript, combinedMode, awaitingDefault]);
 
   // Incrementally load new messages. Two modes:
   //   - bootstrap (lastLineRef === 0): the initial load saw an empty
@@ -384,7 +395,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   //     parsed message we've seen. The server already de-overlaps via
   //     afterLine, so we can safely append.
   const fetchNewMessages = useCallback(async () => {
-    if (combinedMode) return;
+    if (awaitingDefault || combinedMode) return;
     if (fetchingRef.current) {
       // Coalesce: remember a trigger arrived during this fetch and re-run
       // exactly once when the in-flight request settles.
@@ -397,7 +408,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     const wasBootstrap = lastLineRef.current === 0;
     try {
       const result = await api.sessions.transcript(sessionId, {
-        agent_id: selectedTranscript || undefined,
+        agent_id: activeTranscript || undefined,
         ...(wasBootstrap ? {} : { after: lastLineRef.current }),
         limit: 50,
       });
@@ -453,7 +464,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, selectedTranscript, combinedMode]);
+  }, [sessionId, activeTranscript, combinedMode, awaitingDefault]);
 
   // WebSocket subscription: refetch on transcript events and session updates.
   // Cursor's native chat watcher emits session_updated as soon as a prompt is
@@ -544,7 +555,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       const prevScrollHeight = container?.scrollHeight ?? 0;
 
       const result = await api.sessions.transcript(sessionId, {
-        agent_id: selectedTranscript || undefined,
+        agent_id: activeTranscript || undefined,
         before: firstLineRef.current || undefined,
         limit: 50,
       });
@@ -575,7 +586,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       historyLoadingRef.current = false;
       setLoadingHistory(false);
     }
-  }, [sessionId, selectedTranscript, hasMore, combinedMode]);
+  }, [sessionId, activeTranscript, hasMore, combinedMode]);
 
   // Load one older page of the combined view, preserving scroll position.
   const loadOlderView = useCallback(async () => {
@@ -660,7 +671,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
           {transcripts.length > 1 && (
             <div className="relative">
               <select
-                value={selectedTranscript ?? transcripts[0]?.id ?? ""}
+                value={activeTranscript ?? transcripts[0]?.id ?? ""}
                 onChange={(e) => setSelectedTranscript(e.target.value || null)}
                 className="appearance-none bg-surface-2 border border-surface-3 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-300 focus:outline-none focus:border-violet-500/50 hover:border-violet-500/30 cursor-pointer transition-colors"
               >
