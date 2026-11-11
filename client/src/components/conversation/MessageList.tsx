@@ -526,6 +526,20 @@ function CollapsibleBlock({
 export function MessageList({ messages, loading }: MessageListProps) {
   const [expandedThinking, setExpandedThinking] = useState<Set<number>>(() => new Set());
 
+  // Track which user messages are pure tool_result (no text) - we merge those into the preceding assistant message.
+  // Declared before the early returns below: a hook must run on every render, and a
+  // mounted list can become empty (a content filter with no matches), which would
+  // otherwise change the number of hooks between renders and crash the page.
+  const userMsgHasText = useMemo(() => {
+    const map = new Map<number, boolean>();
+    messages.forEach((msg, idx) => {
+      if (msg.type !== "user") return;
+      const hasText = msg.content.some((c) => c.type === "text");
+      map.set(idx, hasText);
+    });
+    return map;
+  }, [messages]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
@@ -541,17 +555,6 @@ export function MessageList({ messages, loading }: MessageListProps) {
   }
 
   const toolResultMap = buildToolResultMap(messages);
-
-  // Track which user messages are pure tool_result (no text) - we merge those into the preceding assistant message
-  const userMsgHasText = useMemo(() => {
-    const map = new Map<number, boolean>();
-    messages.forEach((msg, idx) => {
-      if (msg.type !== "user") return;
-      const hasText = msg.content.some((c) => c.type === "text");
-      map.set(idx, hasText);
-    });
-    return map;
-  }, [messages]);
 
   return (
     <div className="space-y-3">

@@ -790,15 +790,12 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
               original transcript disappears.
             </p>
           </div>
+        ) : filterActive && visibleMessageCount(shownMessages) === 0 ? (
+          <p className="py-12 text-center text-sm text-gray-400">
+            {t("detail.transcript.filter.noMatch")}
+          </p>
         ) : (
-          <>
-            {filterActive && visibleMessageCount(shownMessages) === 0 && (
-              <p className="py-12 text-center text-sm text-gray-400">
-                {t("detail.transcript.filter.noMatch")}
-              </p>
-            )}
-            <MessageList messages={shownMessages} loading={false} />
-          </>
+          <MessageList messages={shownMessages} loading={false} />
         )}
       </div>
 

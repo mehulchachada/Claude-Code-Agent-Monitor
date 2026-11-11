@@ -71,4 +71,36 @@ describe("ConversationView content filter", () => {
     expect(screen.getByText("It is fixed")).toBeInTheDocument();
     expect(screen.queryByText(/loaded messages/)).not.toBeInTheDocument();
   });
+
+  it("shows a notice instead of crashing when a filter matches nothing", async () => {
+    mocks.transcript.mockResolvedValue({
+      messages: [
+        {
+          type: "user",
+          sender: "user",
+          timestamp: ts,
+          content: [{ type: "text", text: "Fix the bug" }],
+        },
+      ],
+      total: 1,
+      first_line: 1,
+      last_line: 1,
+      has_more: false,
+    });
+
+    render(<ConversationView sessionId="empty-filter-session" />);
+    await screen.findByText("Fix the bug");
+
+    // Thinking has no matches here. The list was mounted with messages and now has
+    // none to draw; this used to change the number of hooks and blank the page.
+    fireEvent.click(screen.getByRole("button", { name: /filter by kind/i }));
+    fireEvent.click(await screen.findByText("Thinking (0)"));
+
+    expect(screen.getByText("No loaded messages match these filters.")).toBeInTheDocument();
+    expect(screen.queryByText("Fix the bug")).not.toBeInTheDocument();
+    expect(screen.queryByText("No conversation records found.")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(screen.getByText("Fix the bug")).toBeInTheDocument();
+  });
 });
