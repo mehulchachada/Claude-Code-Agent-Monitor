@@ -82,7 +82,32 @@
     "transcriptNotFound": "이 Agent의 대화 기록을 찾을 수 없습니다. Transcript 파일이 없거나 아직 연결되지 않았을 수 있습니다.",
     "hookOnlySession": "이 Codex 세션은 rollout을 디스크에 기록하지 않고 실행되어(예: `codex exec --ephemeral`) 생명주기 hook에서 기록을 재구성했습니다. 프롬프트, 도구 호출, 응답은 저장되었지만 열어 볼 전체 transcript는 없습니다.",
     "transcript": {
-      "loadOlder": "↑ 이전 메시지 불러오기"
+      "loadOlder": "↑ 이전 메시지 불러오기",
+      "filter": {
+        "kindsLabel": "종류별 필터",
+        "kindsAll": "모든 종류",
+        "kindsSelected": "종류 {{count}}개",
+        "toolsLabel": "도구별 필터",
+        "toolsAll": "모든 도구",
+        "toolsSelected": "도구 {{count}}개",
+        "modelsLabel": "모델별 필터",
+        "modelsAll": "모든 모델",
+        "modelsSelected": "모델 {{count}}개",
+        "search": "옵션 검색...",
+        "empty": "일치하는 옵션이 없습니다",
+        "clear": "지우기",
+        "shown": "불러온 메시지 {{loaded}}개 중 {{shown}}개 표시",
+        "noMatch": "불러온 메시지 중 이 필터와 일치하는 것이 없습니다.",
+        "clearAll": "필터 지우기",
+        "kind": {
+          "prompt": "프롬프트",
+          "reply": "응답",
+          "thinking": "사고",
+          "tool": "도구 호출",
+          "error": "오류",
+          "system": "시스템 출력"
+        }
+      }
     }
   },
   "external": {

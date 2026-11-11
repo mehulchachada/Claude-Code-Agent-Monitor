@@ -81,7 +81,32 @@
     "transcriptNotFound": "Conversation transcript not found for this agent. The transcript file may be missing or not yet linked.",
     "hookOnlySession": "This Codex session ran without writing a rollout to disk (as with `codex exec --ephemeral`), so its history was reconstructed from lifecycle hooks. Prompts, tool calls, and replies are captured, but there is no full transcript to open.",
     "transcript": {
-      "loadOlder": "↑ Load older messages"
+      "loadOlder": "↑ Load older messages",
+      "filter": {
+        "kindsLabel": "Filter by kind",
+        "kindsAll": "All kinds",
+        "kindsSelected": "{{count}} kinds",
+        "toolsLabel": "Filter by tool",
+        "toolsAll": "All tools",
+        "toolsSelected": "{{count}} tools",
+        "modelsLabel": "Filter by model",
+        "modelsAll": "All models",
+        "modelsSelected": "{{count}} models",
+        "search": "Search options...",
+        "empty": "No matching options",
+        "clear": "Clear",
+        "shown": "Showing {{shown}} of {{loaded}} loaded messages",
+        "noMatch": "No loaded messages match these filters.",
+        "clearAll": "Clear filters",
+        "kind": {
+          "prompt": "Prompts",
+          "reply": "Replies",
+          "thinking": "Thinking",
+          "tool": "Tool calls",
+          "error": "Errors",
+          "system": "System output"
+        }
+      }
     }
   },
   "remoteSourceBadgeTitle": "Collected from a remote machine",

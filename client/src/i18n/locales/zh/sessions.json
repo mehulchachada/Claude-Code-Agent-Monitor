@@ -82,7 +82,32 @@
     "transcriptNotFound": "未找到此 Agent 的对话记录。Transcript 文件可能缺失或尚未关联。",
     "hookOnlySession": "此 Codex 会话运行时未将 rollout 写入磁盘（例如 `codex exec --ephemeral`），因此其历史记录由生命周期 hook 重建。提示词、工具调用和回复均已捕获，但没有完整的 transcript 可供打开。",
     "transcript": {
-      "loadOlder": "↑ 加载更早的消息"
+      "loadOlder": "↑ 加载更早的消息",
+      "filter": {
+        "kindsLabel": "按类型筛选",
+        "kindsAll": "所有类型",
+        "kindsSelected": "{{count}} 种类型",
+        "toolsLabel": "按工具筛选",
+        "toolsAll": "所有工具",
+        "toolsSelected": "{{count}} 个工具",
+        "modelsLabel": "按模型筛选",
+        "modelsAll": "所有模型",
+        "modelsSelected": "{{count}} 个模型",
+        "search": "搜索选项...",
+        "empty": "没有匹配的选项",
+        "clear": "清除",
+        "shown": "显示已加载的 {{loaded}} 条消息中的 {{shown}} 条",
+        "noMatch": "已加载的消息中没有符合这些筛选条件的。",
+        "clearAll": "清除筛选",
+        "kind": {
+          "prompt": "提示",
+          "reply": "回复",
+          "thinking": "思考",
+          "tool": "工具调用",
+          "error": "错误",
+          "system": "系统输出"
+        }
+      }
     }
   },
   "external": {

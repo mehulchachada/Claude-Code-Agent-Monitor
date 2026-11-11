@@ -82,7 +82,32 @@
     "transcriptNotFound": "Không tìm thấy bản ghi hội thoại cho agent này. Tệp transcript có thể bị thiếu hoặc chưa được liên kết.",
     "hookOnlySession": "Phiên Codex này chạy mà không ghi rollout xuống đĩa (như với `codex exec --ephemeral`), nên lịch sử được tái dựng từ các hook vòng đời. Prompt, lệnh gọi công cụ và phản hồi đều được ghi lại, nhưng không có transcript đầy đủ để mở.",
     "transcript": {
-      "loadOlder": "↑ Tải các tin nhắn cũ hơn"
+      "loadOlder": "↑ Tải các tin nhắn cũ hơn",
+      "filter": {
+        "kindsLabel": "Lọc theo loại",
+        "kindsAll": "Tất cả các loại",
+        "kindsSelected": "{{count}} loại",
+        "toolsLabel": "Lọc theo công cụ",
+        "toolsAll": "Tất cả công cụ",
+        "toolsSelected": "{{count}} công cụ",
+        "modelsLabel": "Lọc theo mô hình",
+        "modelsAll": "Tất cả mô hình",
+        "modelsSelected": "{{count}} mô hình",
+        "search": "Tìm tùy chọn...",
+        "empty": "Không có tùy chọn phù hợp",
+        "clear": "Xóa",
+        "shown": "Đang hiển thị {{shown}} trên {{loaded}} tin nhắn đã tải",
+        "noMatch": "Không có tin nhắn đã tải nào khớp với các bộ lọc này.",
+        "clearAll": "Xóa bộ lọc",
+        "kind": {
+          "prompt": "Lời nhắc",
+          "reply": "Phản hồi",
+          "thinking": "Suy nghĩ",
+          "tool": "Lệnh gọi công cụ",
+          "error": "Lỗi",
+          "system": "Đầu ra hệ thống"
+        }
+      }
     }
   },
   "external": {

@@ -81,7 +81,32 @@
     "transcriptNotFound": "No se encontró la transcripción de la conversación para este agente. El archivo de transcripción puede estar ausente o aún no vinculado.",
     "hookOnlySession": "Esta sesión de Codex se ejecutó sin escribir un rollout en disco (como con `codex exec --ephemeral`), por lo que su historial se reconstruyó a partir de los hooks del ciclo de vida. Se capturan los prompts, las llamadas a herramientas y las respuestas, pero no hay una transcripción completa que abrir.",
     "transcript": {
-      "loadOlder": "↑ Cargar mensajes anteriores"
+      "loadOlder": "↑ Cargar mensajes anteriores",
+      "filter": {
+        "kindsLabel": "Filtrar por tipo",
+        "kindsAll": "Todos los tipos",
+        "kindsSelected": "{{count}} tipos",
+        "toolsLabel": "Filtrar por herramienta",
+        "toolsAll": "Todas las herramientas",
+        "toolsSelected": "{{count}} herramientas",
+        "modelsLabel": "Filtrar por modelo",
+        "modelsAll": "Todos los modelos",
+        "modelsSelected": "{{count}} modelos",
+        "search": "Buscar opciones...",
+        "empty": "No hay opciones coincidentes",
+        "clear": "Borrar",
+        "shown": "Mostrando {{shown}} de {{loaded}} mensajes cargados",
+        "noMatch": "Ningún mensaje cargado coincide con estos filtros.",
+        "clearAll": "Borrar filtros",
+        "kind": {
+          "prompt": "Indicaciones",
+          "reply": "Respuestas",
+          "thinking": "Razonamiento",
+          "tool": "Llamadas a herramientas",
+          "error": "Errores",
+          "system": "Salida del sistema"
+        }
+      }
     }
   },
   "remoteSourceBadgeTitle": "Recopilado desde una máquina remota",

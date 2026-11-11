@@ -199,13 +199,24 @@
  *
  * ----------------------------------------------------------------------------- */
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Loader2, ArrowDown, MessagesSquare, RefreshCw } from "lucide-react";
+import { ChevronDown, Filter, Loader2, ArrowDown, MessagesSquare, RefreshCw } from "lucide-react";
 import { api } from "../../lib/api";
 import { eventBus } from "../../lib/eventBus";
 import { isRemoteDataRefreshMessage } from "../../lib/remoteDataEvents";
 import { MessageList } from "./MessageList";
+import { MultiSelect } from "../MultiSelect";
+import { formatModelName } from "../../lib/format";
+import {
+  CONVERSATION_KINDS,
+  EMPTY_CONVERSATION_FILTER,
+  conversationFacets,
+  filterConversation,
+  isConversationFilterActive,
+  visibleMessageCount,
+} from "../../lib/conversation-filter";
+import type { ConversationFilter } from "../../lib/conversation-filter";
 import type { TranscriptMessage, TranscriptInfo, WSMessage } from "../../lib/types";
 
 /**
@@ -252,6 +263,12 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   const [error, setError] = useState<string | null>(null);
   const [transcripts, setTranscripts] = useState<TranscriptInfo[]>([]);
   const [showNewMsg, setShowNewMsg] = useState(false);
+  // Content filter. It narrows what is drawn from the messages already loaded;
+  // it never changes what is fetched, so paging and live updates are untouched.
+  const [filter, setFilter] = useState<ConversationFilter>(EMPTY_CONVERSATION_FILTER);
+  const filterActive = isConversationFilterActive(filter);
+  const facets = useMemo(() => conversationFacets(messages), [messages]);
+  const shownMessages = useMemo(() => filterConversation(messages, filter), [messages, filter]);
 
   // Track JSONL line numbers for incremental requests and history loading
   const lastLineRef = useRef(0);
@@ -633,6 +650,95 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
         </div>
       )}
 
+      {/* Content filter - by kind of content and by tool. Counts cover the
+          messages loaded so far, which is also what the filter applies to. */}
+      {!loading && messages.length > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-2 mb-3 flex-shrink-0"
+          data-testid="conversation-filters"
+        >
+          <Filter className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" aria-hidden="true" />
+          <div className="w-[200px]">
+            <MultiSelect
+              label={t("detail.transcript.filter.kindsLabel")}
+              options={CONVERSATION_KINDS.map((kind) => ({
+                value: kind,
+                label: `${t(`detail.transcript.filter.kind.${kind}`)} (${facets.kinds[kind]})`,
+              }))}
+              value={filter.kinds}
+              onChange={(values) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  kinds: CONVERSATION_KINDS.filter((kind) => values.includes(kind)),
+                }))
+              }
+              allLabel={t("detail.transcript.filter.kindsAll")}
+              selectedCountLabel={(count) => t("detail.transcript.filter.kindsSelected", { count })}
+              searchPlaceholder={t("detail.transcript.filter.search")}
+              emptyLabel={t("detail.transcript.filter.empty")}
+              clearLabel={t("detail.transcript.filter.clear")}
+            />
+          </div>
+          {facets.tools.length > 0 && (
+            <div className="w-[220px]">
+              <MultiSelect
+                label={t("detail.transcript.filter.toolsLabel")}
+                options={facets.tools.map((tool) => ({
+                  value: tool.name,
+                  label: `${tool.name} (${tool.count})`,
+                }))}
+                value={filter.tools}
+                onChange={(values) => setFilter((prev) => ({ ...prev, tools: values }))}
+                allLabel={t("detail.transcript.filter.toolsAll")}
+                selectedCountLabel={(count) =>
+                  t("detail.transcript.filter.toolsSelected", { count })
+                }
+                searchPlaceholder={t("detail.transcript.filter.search")}
+                emptyLabel={t("detail.transcript.filter.empty")}
+                clearLabel={t("detail.transcript.filter.clear")}
+              />
+            </div>
+          )}
+          {facets.models.length > 0 && (
+            <div className="w-[220px]">
+              <MultiSelect
+                label={t("detail.transcript.filter.modelsLabel")}
+                options={facets.models.map((model) => ({
+                  value: model.name,
+                  label: `${formatModelName(model.name)} (${model.count})`,
+                }))}
+                value={filter.models}
+                onChange={(values) => setFilter((prev) => ({ ...prev, models: values }))}
+                allLabel={t("detail.transcript.filter.modelsAll")}
+                selectedCountLabel={(count) =>
+                  t("detail.transcript.filter.modelsSelected", { count })
+                }
+                searchPlaceholder={t("detail.transcript.filter.search")}
+                emptyLabel={t("detail.transcript.filter.empty")}
+                clearLabel={t("detail.transcript.filter.clear")}
+              />
+            </div>
+          )}
+          {filterActive && (
+            <>
+              <span className="text-[11px] text-gray-500">
+                {t("detail.transcript.filter.shown", {
+                  shown: visibleMessageCount(shownMessages),
+                  loaded: visibleMessageCount(messages),
+                })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setFilter(EMPTY_CONVERSATION_FILTER)}
+                className="text-[11px] text-gray-400 hover:text-gray-200 underline underline-offset-2"
+              >
+                {t("detail.transcript.filter.clearAll")}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Error alert */}
       {error && (
         <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 flex-shrink-0">
@@ -685,7 +791,14 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
             </p>
           </div>
         ) : (
-          <MessageList messages={messages} loading={false} />
+          <>
+            {filterActive && visibleMessageCount(shownMessages) === 0 && (
+              <p className="py-12 text-center text-sm text-gray-400">
+                {t("detail.transcript.filter.noMatch")}
+              </p>
+            )}
+            <MessageList messages={shownMessages} loading={false} />
+          </>
         )}
       </div>
 
