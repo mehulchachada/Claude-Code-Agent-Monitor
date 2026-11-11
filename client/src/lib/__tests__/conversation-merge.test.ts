@@ -104,6 +104,20 @@ describe("mergeTranscripts", () => {
     expect(sources(merged.messages)).toEqual(["main", "main", "agent-1"]);
   });
 
+  it("keeps a window's own order even when a later message has an earlier timestamp", () => {
+    const main = window(
+      mainInfo,
+      [msg(at(12, 0), "main first"), msg(at(11, 0), "main second, earlier stamp")],
+      false
+    );
+    const sub = window(subInfo, [msg(at(11, 30), "sub")], false);
+    const merged = mergeTranscripts([main, sub]);
+    // "main second" inherits the non-decreasing time of "main first" (12:00),
+    // so it stays after "main first" and after the 11:30 sub-agent message.
+    expect(texts(merged.messages)).toEqual(["sub", "main first", "main second, earlier stamp"]);
+    expect(sources(merged.messages)).toEqual(["agent-1", "main", "main"]);
+  });
+
   it("lets a null timestamp inherit the previous message's time", () => {
     const win = window(
       mainInfo,

@@ -72,6 +72,16 @@ function effectiveTimes(messages: TranscriptMessage[]): number[] {
     while (j < times.length && times[j] === undefined) j += 1;
     times[i] = times[j];
   }
+  // Make effective times non-decreasing inside a window so that a later
+  // message carrying an earlier timestamp never reorders ahead of an earlier
+  // message in the same window.
+  for (let i = 1; i < times.length; i += 1) {
+    const prev = times[i - 1];
+    const current = times[i];
+    if (prev !== undefined && (current === undefined || current < prev)) {
+      times[i] = prev;
+    }
+  }
   return times.map((t) => t ?? 0);
 }
 
