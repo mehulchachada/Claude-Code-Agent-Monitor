@@ -1,9 +1,9 @@
 /**
  * @file ConversationView.combined.test.tsx
- * @description Verifies the combined "all agents" view: the picker offers it,
- * switching to it merges every transcript in chronological order with source
- * chips, and the single-transcript loader is never asked for a transcript
- * called "__all__".
+ * @description Verifies the combined view of the Conversation tab: choosing
+ * "All agents" merges every transcript in time order, tags each row with its
+ * source, and never asks the server for a transcript named after the picker value.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
