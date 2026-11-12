@@ -292,6 +292,8 @@ import { useDataScope } from "../lib/dataScope";
 import { AgentCard } from "../components/AgentCard";
 import { SessionOverview } from "../components/SessionOverview";
 import { TodoProgressPanel } from "../components/TodoProgressPanel";
+import { LocalRunsPanel } from "../components/LocalRunsPanel";
+import { LocalSavingsChip } from "../components/LocalSavingsChip";
 import { ConversationView } from "../components/conversation/ConversationView";
 import { externalRunInfo } from "../lib/external-run";
 import { SessionStatusBadge, AgentStatusBadge, REASON_ICONS } from "../components/StatusBadge";
@@ -953,6 +955,7 @@ export function SessionDetail() {
                 {fmtCostFull(cost.total_cost).slice(1)}
               </span>
             )}
+            <LocalSavingsChip agents={agents} comparisonModel={session.model} />
           </div>
           {session.cwd && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2 min-w-0">
@@ -1159,6 +1162,12 @@ export function SessionDetail() {
               <WorkflowRunsPanel runs={workflows} hideSessionLink />
             </div>
           )}
+
+          <LocalRunsPanel
+            agents={agents}
+            comparisonModel={session.model}
+            sessionCost={cost?.total_cost ?? null}
+          />
 
           {agents.length === 0 ? (
             <p className="text-sm text-gray-500">{t("detail.noAgents")}</p>
