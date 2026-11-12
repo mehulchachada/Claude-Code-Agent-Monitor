@@ -1406,6 +1406,8 @@ honours `DASHBOARD_HOOK_TOKEN` when one is set.
 | `phase` | string | `tool` only: `pre` (about to call) or `post` (finished; the default). |
 | `tool_name`, `tool_input`, `tool_response`, `is_error` | mixed | `tool` only. `tool_response` is truncated to 4,000 characters on the timeline event. |
 | `status`, `error` | string | `end` only. `status` is `ok` (default) or `error`. |
+| `group`, `step` | string | Optional on every event. Label the run as part of a larger task: `group` names the task (kept to 80 characters) and `step` its position, for example `2/3` (kept to 40). |
+| `stats` | object | Optional on every event, usually sent with `end`. Any of `wall_s`, `turns`, `input_tokens`, `cached_input_tokens`, `output_tokens`, `tool_calls`, `checks`. A value that is not a finite, non-negative number is dropped; counts are stored as whole numbers. |
 | `transcript` | object[] | Optional on every event. Conversation lines to append, at most 500 per request. |
 
 Each `transcript` line is a Claude-style message object: `{ "type": "user" | "assistant" |
@@ -1442,6 +1444,25 @@ curl -s -X POST http://127.0.0.1:4820/api/hooks/external-run \
   -d '{"run_id":"demo-1","event":"start","model":"qwen3.8:27b","title":"Draft the rules",
        "parent_session_id":"'"$CLAUDE_CODE_SESSION_ID"'",
        "transcript":[{"type":"user","message":{"content":"Draft the rules"}}]}'
+```
+
+`group`, `step`, and `stats` are stored in the run's `metadata.external`: on the agent for
+a run filed under a session, on the session and its main agent for a standalone run. A
+later event replaces the earlier value. `input_tokens` is the fresh input and
+`cached_input_tokens` the context re-sent from earlier turns.
+
+Session Detail reads them for the **Local model runs** panel: time and tokens per run and
+per `group`, and an estimate of what the same tokens would have cost on the session's own
+model (fresh input at the input rate, cached input at the cache-read rate, output at the
+output rate, from the pricing rule that matches that model). The estimate counts failed
+runs too and does not subtract what the orchestrating session spent on directing them.
+
+```bash
+curl -s -X POST http://127.0.0.1:4820/api/hooks/external-run \
+  -H "Content-Type: application/json" \
+  -d '{"run_id":"demo-1","event":"end","status":"ok","group":"rules","step":"1/2",
+       "stats":{"wall_s":184.2,"turns":14,"input_tokens":52000,
+                "cached_input_tokens":310000,"output_tokens":9400,"tool_calls":21,"checks":3}}'
 ```
 
 `GET /api/hooks/external-run/{run_id}` returns where a run was filed

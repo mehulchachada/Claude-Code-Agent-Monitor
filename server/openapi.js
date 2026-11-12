@@ -2305,7 +2305,7 @@ function createOpenApiSpec() {
           tags: ["Hooks"],
           summary: "Record an external agent run",
           description:
-            "Reports work done by an agent the dashboard does not integrate natively (for example a local model driven by the user's own harness). Filed as a subagent of `parent_session_id` when that session is known here, otherwise as a standalone session. Conversation lines are stored by the dashboard; no file path is accepted.",
+            "Reports work done by an agent the dashboard does not integrate natively (for example a local model driven by the user's own harness). Filed as a subagent of `parent_session_id` when that session is known here, otherwise as a standalone session. Conversation lines are stored by the dashboard; no file path is accepted. Optional `group`, `step`, and `stats` label the run as part of a larger task and record its time and token counts in `metadata.external`.",
           operationId: "recordExternalRun",
           requestBody: {
             required: true,
@@ -2335,6 +2335,20 @@ function createOpenApiSpec() {
                     is_error: { type: "boolean" },
                     status: { type: "string", enum: ["ok", "error"] },
                     error: { type: "string" },
+                    group: { type: "string", maxLength: 80 },
+                    step: { type: "string", maxLength: 40 },
+                    stats: {
+                      type: "object",
+                      properties: {
+                        wall_s: { type: "number", minimum: 0 },
+                        turns: { type: "integer", minimum: 0 },
+                        input_tokens: { type: "integer", minimum: 0 },
+                        cached_input_tokens: { type: "integer", minimum: 0 },
+                        output_tokens: { type: "integer", minimum: 0 },
+                        tool_calls: { type: "integer", minimum: 0 },
+                        checks: { type: "integer", minimum: 0 },
+                      },
+                    },
                     transcript: {
                       type: "array",
                       maxItems: 500,

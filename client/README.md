@@ -204,6 +204,9 @@ client/
 │   │   ├── SnapshotStorage.tsx # Transcript snapshot storage card: per-provider size, compress now, preview-gated prune
 │   │   ├── TodoProgressIndicator.tsx # Micro donut + portal tooltip beside Sessions status
 │   │   ├── TodoProgressPanel.tsx # Full owner-aware tracker on Session Detail
+│   │   ├── LocalRunsPanel.tsx    # Session Detail: time, tokens and estimated saving of a session's external (local model) runs
+│   │   ├── LocalSavingsChip.tsx  # Session header chip with the same estimate
+│   │   ├── conversation/         # Conversation tab: digest (TurnDigest, TurnOutline, TurnDetail), message list, filters
 │   │   ├── todoProgress.ts       # Shared task status colors/formatters
 │   │   └── workflows/      # D3.js workflow visualization components (12 files)
 │   │
@@ -211,7 +214,7 @@ client/
 │   │   ├── Dashboard.tsx
 │   │   ├── KanbanBoard.tsx
 │   │   ├── Sessions.tsx       # Server-paginated table with task-progress donut, page-zero transient Codex startup row, searchable multi-project filtering, and custom sort menus
-│   │   ├── SessionDetail.tsx  # Overview + full task tracker + agent tree + event timeline + cursor-paginated Conversation tab with kind/tool/model content filters and a combined all-agents view
+│   │   ├── SessionDetail.tsx  # Overview + full task tracker + agent tree + event timeline + cursor-paginated Conversation tab with kind/tool/model content filters, a combined all-agents view, and digest/list views; local-run savings panel on the Agents tab
 │   │   ├── ActivityFeed.tsx  # Real-time event log; row click expands payload; Session btn navigates
 │   │   ├── Analytics.tsx
 │   │   ├── Workflows.tsx
@@ -224,13 +227,16 @@ client/
 │   │   ├── eventBus.ts     # WebSocket pub/sub + connection state
 │   │   ├── dataScope.ts    # Global data-scope store (app-wide ?sources= selection)
 │   │   ├── format.ts       # Formatters (formatTime, timeAgo, fmtCost)
+│   │   ├── conversation-turns.ts # Groups transcript messages into turns for the digest view
+│   │   ├── run-savings.ts  # Claude-equivalent cost of external runs, summed per run and per group
 │   │   ├── sound.ts        # Web Audio cue synthesis + sound preferences
 │   │   └── types.ts        # TypeScript type definitions
 │   │
 │   ├── hooks/
 │   │   ├── useWebSocket.ts      # Auto-reconnecting WebSocket hook
 │   │   ├── useNotifications.ts  # Browser push notification triggers
-│   │   └── useSoundCues.ts      # Event-bus → synthesized audio cues
+│   │   ├── useSoundCues.ts      # Event-bus → synthesized audio cues
+│   │   └── useTheme.ts          # Theme preference (system / light / dark), applied as a class on <html>
 │   │
 │   ├── i18n/               # Internationalization (en / zh / vi / ko / es)
 │   ├── App.tsx             # Root component + router setup
@@ -240,7 +246,7 @@ client/
 ├── public/                 # Static assets (sw.js service worker)
 ├── index.html              # HTML template
 ├── vite.config.ts          # Vite + proxy config
-├── tailwind.config.js      # Custom dark theme
+├── tailwind.config.js      # Theme colors as CSS variables (dark + light values)
 ├── tsconfig.json           # Strict TypeScript config
 └── package.json
 ```
@@ -958,6 +964,8 @@ no central store — each feature owns its own key — so this is the inventory:
 | `agent-dashboard-tabby-muted` | local | `components/Tabby/prefs.ts` | Whether Tabby's speech bubbles are muted |
 | `agent-dashboard-tabby-pos` | local | `components/Tabby/prefs.ts` | Tabby's docked edge and vertical offset, as a viewport fraction |
 | `ccam-data-scope` | local | `lib/dataScope.ts` | App-wide data scope — selected remote sources and providers |
+| `agent-dashboard-theme` | local | `hooks/useTheme.ts` | Theme preference: `system`, `light`, or `dark`. Defaults to dark; also read by the inline script in `index.html` before first paint |
+| `agent-dashboard-conversation-view` | local | `components/conversation/ConversationView.tsx` | Conversation tab view: `digest` or `list`. Defaults to digest |
 | `sidebar-collapsed` | local | `components/Sidebar.tsx` | Sidebar collapsed state |
 | `sidebar-connection-stats` | local | `components/Sidebar.tsx` | Cumulative WebSocket stats for the connection modal |
 | `provider-onboarding-shown-v1` | **session** | `components/SplashScreen.tsx` | Splash shown once per browser session, not once ever |

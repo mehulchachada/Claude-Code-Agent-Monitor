@@ -115,7 +115,7 @@ Claude Code, Cursor, Codex 에이전트 세션, 도구 사용, 대화 기록, �
 
 ## 개요
 
-전문적인 다크 테마 웹 인터페이스에서 세션을 추적하고, 에이전트를 실시간으로 모니터링하며, 도구 사용을 시각화하고, 대화를 재생하고, 서브에이전트 오케스트레이션을 관찰하세요. Claude Code와 Codex는 네이티브 Hook을 사용하며, Cursor는 호환되는 실시간 이벤트와 네이티브 `~/.cursor` Transcript 탐색을 통해 기본 제공됩니다.
+다크 및 라이트 테마를 지원하는 전문적인 웹 인터페이스에서 세션을 추적하고, 에이전트를 실시간으로 모니터링하며, 도구 사용을 시각화하고, 대화를 재생하고, 서브에이전트 오케스트레이션을 관찰하세요. Claude Code와 Codex는 네이티브 Hook을 사용하며, Cursor는 호환되는 실시간 이벤트와 네이티브 `~/.cursor` Transcript 탐색을 통해 기본 제공됩니다.
 
 ```mermaid
 graph LR
@@ -314,7 +314,7 @@ flowchart LR
 | **Dashboard** | 저장되는 **Monitor**와 **Health** 탭이 전체 합계, 활성 계층, 최근 활동, 가중 성공률/캐시/오류/힙 상태, 스토리지, 도구, 모델, Subagent 효과, 컴팩션 지표를 결합합니다. Health는 `/api/settings/info`와 `/api/workflows`에서 5초마다 새로 고칩니다. |
 | **Kanban Board** | Agent 열은 Working, Waiting, Completed, Error를, 세션 열은 Active와 Abandoned를 추가로 다룹니다. 카드는 10개씩 표시하고 활성 WebSocket 보기만 구독하며, 전체 제목을 보존하고 권한 입력, 턴 완료, 프롬프트 대기, 중단 같은 대기 사유를 설명합니다. |
 | **Sessions** | 보이는 페이지만 비용을 계산하는 검색, 필터, 서버 페이지네이션 히스토리와 메모리 내 임시 Codex 시작 행을 제공합니다. 검색은 300 ms 디바운스로 `id`, `name`, `cwd`를 대상으로 합니다. 이름은 명시적 제목, AI 제목, 첫 의미 있는 사용자 프롬프트 순으로 결정됩니다. Cursor의 네이티브 생성 제목은 수집 메타데이터가 현재 이름을 CCAM이 소유함을 입증할 때만 임시 첫 프롬프트 대체 이름을 갱신하며, 수동 이름과 소유권이 불분명한 레거시 이름은 그대로 유지됩니다. |
-| **Session Detail** | 실시간 통계, 활성 작업, 도구 사용량, Subagent, 토큰, 계층, 필터링된 이벤트 타임라인, `tool_use_id` 그룹화, 도구별 렌더러를 제공합니다. Conversation 보기는 대기 중인 턴, 시스템 알림, Markdown, 구문 강조 코드, 스타일이 적용된 도구를 렌더링하고, 대기 배너에는 사유와 경과 시간을 표시합니다. Conversation 탭은 콘텐츠 종류(프롬프트, 응답, 사고, 도구 호출, 오류, 시스템 출력), 도구, 모델별로 필터링할 수 있으며, "모든 에이전트" 항목은 외부 실행을 포함한 모든 에이전트의 트랜스크립트를 시간순의 하나의 대화로 합칩니다. |
+| **Session Detail** | 실시간 통계, 활성 작업, 도구 사용량, Subagent, 토큰, 계층, 필터링된 이벤트 타임라인, `tool_use_id` 그룹화, 도구별 렌더러를 제공합니다. Conversation 보기는 대기 중인 턴, 시스템 알림, Markdown, 구문 강조 코드, 스타일이 적용된 도구를 렌더링하고, 대기 배너에는 사유와 경과 시간을 표시합니다. Conversation 탭은 콘텐츠 종류(프롬프트, 응답, 사고, 도구 호출, 오류, 시스템 출력), 도구, 모델별로 필터링할 수 있으며, "모든 에이전트" 항목은 외부 실행을 포함한 모든 에이전트의 트랜스크립트를 시간순의 하나의 대화로 합칩니다. 이 탭은 **요약** 보기로 열립니다. 최신순으로 나열된 턴 개요 옆에 선택한 턴의 프롬프트, 응답, 그 사이의 단계를 '주요 단계' 또는 '전체' 수준으로 보여 줍니다. 토글로 전체 메시지 **목록**으로 전환할 수 있으며 선택은 기억됩니다. |
 | **Activity Feed** | 공유 필터, 서버 페이지네이션, 그룹화, 프로젝트/세션/Subagent 출처, 세션 링크, 일관된 Claude/Codex 상태 배지를 갖춘 일시 정지 가능한 실시간 이벤트를 제공합니다. |
 | **Analytics** | 모델 토큰, 도구 빈도, 일요일 기준 활동 히트맵, 세션 추세, 연결 상태, 레이아웃에 맞는 로딩 스켈레톤, 긴 범례의 페이지네이션을 다룹니다. |
 | **Command Palette** | `Cmd/Ctrl+K`로 최근 명령, 모든 경로, 실시간 서버 세션, 페이지 작업, 프로젝트 디렉터리, 하위 보기, 필터, Settings, Agent Config, 기본 설정, 범위, 언어를 검색합니다. 부분 수열 순위, `>`/`@`/`#` 범위, 전체 키보드 제어, 번역된 레이블, 조용한 검색 실패, 파괴적 작업에 대한 탐색 전용 처리를 지원합니다. |
@@ -341,9 +341,10 @@ flowchart LR
 | **Pre-Existing Session Detection** | 시작 가져오기는 최근 수정된 트랜스크립트를 active로 표시하고, 이후 Stop 이벤트는 가져온 completed 또는 abandoned 세션을 업데이트하기 전에 다시 활성화합니다. |
 | **Continuous Project Sync** | 즉시 시작 sweep, debounce filesystem watcher, 기본 30초인 `DASHBOARD_SESSION_SYNC_MS` poll이 mtime cache와 coalesced scan을 공유합니다. 새로 생겼거나 진행된 파일만 다시 파싱하며, Linux에 안전한 watcher 범위와 실시간 session broadcast를 사용합니다. |
 | **Remote Data Sources** | SSH source는 `scp` 또는 WSL `tar`를 통해 Claude와 Codex home을 독립적으로 mirror하고, `sessions.source`를 tag하며, lifecycle을 조정하고, 두 provider 중 하나라도 작동하면 healthy 상태를 유지합니다. Polling 기본값은 15초이며 stale fallback은 실패한 provider에만 적용됩니다. 인증 정보는 host SSH에 남습니다. |
-| **외부 에이전트 실행** | 대시보드가 기본적으로 통합하지 않는 에이전트(예: 직접 만든 하니스로 구동하는 로컬 모델)가 수행한 작업을 `POST /api/hooks/external-run`으로 보고합니다. 모니터링 중인 세션이 시작한 실행은 해당 세션 아래 서브에이전트로 기록되어 자체 대화와 타임라인 이벤트를 가지며, 어떤 세션도 조율하지 않은 실행은 **외부 실행**으로 표시된 독립 세션이 됩니다. 대화는 대시보드가 직접 저장하며 호출자가 제공한 경로에서 읽지 않습니다. |
+| **외부 에이전트 실행** | 대시보드가 기본적으로 통합하지 않는 에이전트(예: 직접 만든 하니스로 구동하는 로컬 모델)가 수행한 작업을 `POST /api/hooks/external-run`으로 보고합니다. 모니터링 중인 세션이 시작한 실행은 해당 세션 아래 서브에이전트로 기록되어 자체 대화와 타임라인 이벤트를 가지며, 어떤 세션도 조율하지 않은 실행은 **외부 실행**으로 표시된 독립 세션이 됩니다. 대화는 대시보드가 직접 저장하며 호출자가 제공한 경로에서 읽지 않습니다. 하니스는 실행의 `group`, `step`, `stats`(소요 시간, 턴, 토큰, 도구 호출)도 보고할 수 있으며, 그러면 Session Detail에 **로컬 모델 실행** 패널과 헤더 칩이 표시되어 해당 실행을 세션 자체 모델로 수행했다면 들었을 비용을 추정합니다. |
 | **Remote Push Ingestion** | `POST /api/hooks/ingest-batch`는 NAT 뒤의 머신에서 세션 합계와 이벤트를 보내고, `POST /api/hooks/ingest-transcript`는 제목, 기록, token, Subagent 가져오기에 필요한 offset 검증 기반 main Agent 및 Subagent JSONL을 추가합니다. 두 route 모두 `REMOTE_PUSH_TOKEN` 또는 `REMOTE_PUSH_TOKEN_FILE`이 설정될 때까지 비활성 상태이며 query-string credential과 로컬 소유 세션을 거부합니다. `ingest-transcript`는 해당 route의 더 큰 parser가 실행되기 전에 인증합니다. |
 | **Responsive Design** | 모바일 레이아웃은 grid를 쌓고, 넓은 table을 scroll하며, navigation을 접습니다. |
+| **Light and Dark Themes** | 사이드바의 테마 전환에서 시스템, 라이트, 다크를 선택할 수 있으며 기본값은 다크입니다. 모든 색상은 다크 값과 라이트 값을 가진 CSS 변수이므로 페이지, 차트, 워크플로 다이어그램이 선택한 테마를 따르고, 저장된 테마는 첫 페인트 전에 적용됩니다. |
 | **UI Localization** | 영어, 중국어, 베트남어, 한국어, 스페인어는 UI copy, accessibility label, workflow 설명과 tooltip, model-pricing 안내, provider home, Import History를 다룹니다. |
 | **Seed Data** | 내장 script가 실제적인 demo 및 development data를 제공합니다. |
 | **Statusline** | 컬러 CLI strip이 model, context, Git branch, 방향별 token, USD session cost를 표시합니다. |
@@ -2169,7 +2170,7 @@ agent-dashboard/
 |   |-- package.json             # 클라이언트 의존성
 |   |-- index.html               # HTML 진입점
 |   |-- vite.config.ts           # Vite + 프록시 설정
-|   |-- tailwind.config.js       # 커스텀 다크 테마
+|   |-- tailwind.config.js       # CSS 변수 기반 테마 색상(다크 + 라이트)
 |   |-- tsconfig.json            # 엄격한 TypeScript
 |   +-- src/
 |       |-- main.tsx             # React 진입점

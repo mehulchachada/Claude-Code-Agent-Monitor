@@ -501,7 +501,7 @@ Claude turn-duration ingestion assigns each `TurnDuration` a stable transcript i
 | ------ | ------------------ | ---------------------------------------------- |
 | `POST` | `/api/hooks/event` | Ingest one Claude Code hook event envelope     |
 | `POST` | `/api/hooks/codex` | Acknowledge a Codex lifecycle notification and asynchronously ingest its rollout (or, for a rollout-less run, the payload itself) |
-| `POST` | `/api/hooks/external-run` | Record an external agent run (for example a local model driven by your own harness): filed as a subagent of its orchestrating session when `parent_session_id` is known here, otherwise as a standalone session; conversation lines are stored by the dashboard |
+| `POST` | `/api/hooks/external-run` | Record an external agent run (for example a local model driven by your own harness): filed as a subagent of its orchestrating session when `parent_session_id` is known here, otherwise as a standalone session; conversation lines are stored by the dashboard; optional `group`, `step`, and `stats` label the run and record its time and token counts |
 | `GET` | `/api/hooks/external-run/:runId` | Where an external run was filed (`mode`, `session_id`, `agent_id`, `transcript_id`) |
 | `POST` | `/api/hooks/ingest-batch` | Third session-data ingestion path (see [Remote Data Sources](#remote-data-sources) for the other two): a roaming/NAT'd machine the dashboard can never reach to pull FROM pushes a batch of its own session data instead |
 | `POST` | `/api/hooks/ingest-transcript` | Append a registered remote-push Claude session's main or subagent transcript JSONL in offset-checked chunks |
