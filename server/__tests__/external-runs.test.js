@@ -242,6 +242,101 @@ describe("external runs", () => {
     assert.equal(meta.origin, "mac");
   });
 
+  it("stores group, step and stats on a child run", async () => {
+    const parent = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    await post("/api/hooks/event", {
+      hook_type: "SessionStart",
+      data: { session_id: parent, cwd: "C:\\work", model: "claude-opus-5-5", source: "startup" },
+    });
+    await run({
+      run_id: "child-stats-1",
+      event: "start",
+      parent_session_id: parent,
+      model: "qwen3.8:27b",
+      group: "digest-v2",
+      step: "1/3",
+    });
+    await run({
+      run_id: "child-stats-1",
+      event: "end",
+      status: "ok",
+      stats: {
+        wall_s: 12.5,
+        turns: 4,
+        input_tokens: 1000.9,
+        cached_input_tokens: 3000,
+        output_tokens: 500,
+        tool_calls: 7,
+        checks: 2,
+      },
+    });
+    const meta = JSON.parse(stmts.getAgent.get("ext-child-stats-1").metadata).external;
+    assert.equal(meta.run_id, "child-stats-1");
+    assert.equal(meta.mode, "child");
+    assert.equal(meta.group, "digest-v2");
+    assert.equal(meta.step, "1/3");
+    assert.deepEqual(meta.stats, {
+      wall_s: 12.5,
+      turns: 4,
+      input_tokens: 1000,
+      cached_input_tokens: 3000,
+      output_tokens: 500,
+      tool_calls: 7,
+      checks: 2,
+    });
+  });
+
+  it("drops invalid stats and keeps earlier extras", async () => {
+    const parent = "cccccccc-dddd-4eee-8fff-gggggggggggg";
+    await post("/api/hooks/event", {
+      hook_type: "SessionStart",
+      data: { session_id: parent, cwd: "C:\\work", model: "claude-opus-5-5", source: "startup" },
+    });
+    await run({
+      run_id: "child-stats-2",
+      event: "start",
+      parent_session_id: parent,
+      group: "digest-v2",
+      stats: { wall_s: -1, turns: "9", output_tokens: 5, junk: 1 },
+    });
+    let meta = JSON.parse(stmts.getAgent.get("ext-child-stats-2").metadata).external;
+    assert.equal(meta.group, "digest-v2");
+    assert.deepEqual(meta.stats, { output_tokens: 5 });
+
+    await run({ run_id: "child-stats-2", event: "tool", phase: "pre", tool_name: "read_file" });
+    meta = JSON.parse(stmts.getAgent.get("ext-child-stats-2").metadata).external;
+    assert.equal(meta.group, "digest-v2", "a later event without group keeps the earlier one");
+
+    await run({ run_id: "child-stats-2", event: "end", status: "ok", stats: [] });
+    meta = JSON.parse(stmts.getAgent.get("ext-child-stats-2").metadata).external;
+    assert.deepEqual(meta.stats, { output_tokens: 5 }, "stats: [] stores nothing");
+
+    await run({ run_id: "child-stats-2", event: "end", status: "ok", stats: "x" });
+    meta = JSON.parse(stmts.getAgent.get("ext-child-stats-2").metadata).external;
+    assert.deepEqual(meta.stats, { output_tokens: 5 }, 'stats: "x" stores nothing');
+  });
+
+  it("stores stats on a standalone run", async () => {
+    const started = await run({
+      run_id: "solo-stats-1",
+      event: "start",
+      model: "qwen3.8:27b",
+      group: "digest-v2",
+      step: "2/3",
+    });
+    await run({
+      run_id: "solo-stats-1",
+      event: "end",
+      status: "ok",
+      stats: { wall_s: 3.25, turns: 2, output_tokens: 100 },
+    });
+    const meta = JSON.parse(stmts.getSession.get(started.body.session_id).metadata).external;
+    assert.equal(meta.mode, "standalone");
+    assert.equal(meta.group, "digest-v2");
+    assert.equal(meta.step, "2/3");
+    assert.deepEqual(meta.stats, { wall_s: 3.25, turns: 2, output_tokens: 100 });
+  });
+
   it("stores conversations only inside the dashboard data directory", async () => {
     const dir = getExternalTranscriptDir();
     assert.ok(dir.startsWith(process.env.DASHBOARD_DATA_DIR));

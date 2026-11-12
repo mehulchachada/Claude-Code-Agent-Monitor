@@ -51,6 +51,66 @@ function mergeMetadata(existing, patch) {
   return JSON.stringify({ ...current, ...patch });
 }
 
+const STATS_KEYS = [
+  "wall_s",
+  "turns",
+  "input_tokens",
+  "cached_input_tokens",
+  "output_tokens",
+  "tool_calls",
+  "checks",
+];
+
+/** Keep the finite, non-negative numbers the harness reports about a run. */
+function readStats(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const out = {};
+  for (const key of STATS_KEYS) {
+    const n = value[key];
+    if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 1e12) continue;
+    out[key] = key === "wall_s" ? n : Math.floor(n);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** The optional run extras (group, step, stats) that are present and valid. */
+function runExtras(body) {
+  const extras = {};
+  const group = text(body.group, 80);
+  if (group) extras.group = group;
+  const step = text(body.step, 40);
+  if (step) extras.step = step;
+  const stats = readStats(body.stats);
+  if (stats) extras.stats = stats;
+  return extras;
+}
+
+/** Merge the run extras into the external block of the rows a run lives on. */
+function applyRunExtras(loc, body) {
+  const extras = runExtras(body);
+  if (Object.keys(extras).length === 0) return;
+  const mergeRow = (kind, id) => {
+    const row = kind === "agent" ? stmts.getAgent.get(id) : stmts.getSession.get(id);
+    if (!row) return;
+    const current = readExternalMeta(row.metadata);
+    if (!current) return;
+    const metadata = mergeMetadata(row.metadata, { external: { ...current, ...extras } });
+    if (kind === "agent") {
+      stmts.setAgentMetadata.run(metadata, id);
+      broadcast("agent_updated", stmts.getAgent.get(id));
+    } else {
+      stmts.setSessionMetadata.run(metadata, id);
+      broadcast("session_updated", stmts.getSession.get(id));
+    }
+  };
+  if (loc.mode === "child") {
+    mergeRow("agent", loc.agentId);
+  } else {
+    mergeRow("session", loc.sessionId);
+    mergeRow("agent", loc.agentId);
+  }
+}
+
 /** Where a run already lives, or null when this dashboard has not seen it. */
 function locateRun(runId) {
   const agent = stmts.getAgent.get(externalAgentId(runId));
@@ -272,7 +332,8 @@ function normaliseLines(lines, loc, run) {
  * Body: { run_id, event: "start"|"tool"|"message"|"end", parent_session_id?,
  *         model?, provider?, title?, origin?, cwd?, prompt?,
  *         phase?, tool_name?, tool_input?, tool_response?, is_error?,
- *         status?, error?, transcript?: object[] }
+ *         status?, error?, transcript?: object[],
+ *         group?, step?, stats?: object }
  */
 router.post("/", (req, res) => {
   const body = req.body || {};
@@ -298,6 +359,7 @@ router.post("/", (req, res) => {
 
     if (body.event === "tool") toolEvent(loc, body);
     if (body.event === "end") endRun(loc, body);
+    applyRunExtras(loc, body);
 
     let appended = 0;
     if (Array.isArray(body.transcript) && body.transcript.length) {
