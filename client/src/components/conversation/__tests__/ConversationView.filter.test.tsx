@@ -5,7 +5,7 @@
  * shown, and clearing the filter restores the full conversation.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({ transcript: vi.fn() }));
@@ -27,7 +27,13 @@ import { ConversationView } from "../ConversationView";
 
 const ts = "2026-08-01T12:00:00.000Z";
 
+// These cases exercise the flat list; the tab opens in the digest view by default.
+beforeEach(() => {
+  localStorage.setItem("agent-dashboard-conversation-view", "list");
+});
+
 afterEach(() => {
+  localStorage.clear();
   mocks.transcript.mockReset();
 });
 

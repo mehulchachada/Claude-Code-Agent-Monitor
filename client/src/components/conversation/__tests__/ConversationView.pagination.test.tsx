@@ -163,7 +163,7 @@
  *   tests.
  * ============================================================================= */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { TranscriptResult } from "../../../lib/types";
 
@@ -208,7 +208,13 @@ function result(
   return { messages, total: 100, first_line: firstLine, last_line: lastLine, has_more: hasMore };
 }
 
+// These cases exercise the flat list; the tab opens in the digest view by default.
+beforeEach(() => {
+  localStorage.setItem("agent-dashboard-conversation-view", "list");
+});
+
 afterEach(() => {
+  localStorage.clear();
   mocks.transcript.mockReset();
   mocks.handlers.clear();
 });

@@ -6,7 +6,7 @@
  * named after the picker value.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({ transcript: vi.fn(), transcripts: vi.fn() }));
@@ -84,7 +84,13 @@ function renderView(props: { initialTranscriptId?: string } = {}) {
   return render(<ConversationView sessionId="combined-session" {...props} />);
 }
 
+// These cases exercise the flat list; the tab opens in the digest view by default.
+beforeEach(() => {
+  localStorage.setItem("agent-dashboard-conversation-view", "list");
+});
+
 afterEach(() => {
+  localStorage.clear();
   mocks.transcript.mockReset();
   mocks.transcripts.mockReset();
 });

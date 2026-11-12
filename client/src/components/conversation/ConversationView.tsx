@@ -210,14 +210,13 @@ import {
   RefreshCw,
   List,
   Layers,
-  Search,
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { eventBus } from "../../lib/eventBus";
 import { isRemoteDataRefreshMessage } from "../../lib/remoteDataEvents";
 import { MessageList } from "./MessageList";
 import { TurnDigest } from "./TurnDigest";
-import { groupIntoTurns, filterTurns } from "../../lib/conversation-turns";
+import { groupIntoTurns } from "../../lib/conversation-turns";
 import { useCombinedTranscript } from "../../lib/useCombinedTranscript";
 import { MultiSelect } from "../MultiSelect";
 import { formatModelName } from "../../lib/format";
@@ -246,6 +245,21 @@ const POLL_INTERVAL_MS = 3000;
 const TRANSCRIPTS_REFRESH_MS = 15000;
 /** Picker value for the combined view of every transcript in the session. */
 const ALL_AGENTS = "__all__";
+/** `localStorage` key remembering the user's conversation view mode. */
+const VIEW_MODE_KEY = "agent-dashboard-conversation-view";
+/** Safety cap: stop auto-loading history in digest mode once this many messages are loaded. */
+const DIGEST_HISTORY_CAP = 5000;
+
+/** Read the stored view mode, defaulting to the digest view. */
+function loadStoredViewMode(): "digest" | "list" {
+  try {
+    const stored = localStorage.getItem(VIEW_MODE_KEY);
+    if (stored === "list" || stored === "digest") return stored;
+  } catch {
+    // Non-fatal - fall through to the default.
+  }
+  return "digest";
+}
 
 /** Props for {@link ConversationView}. */
 interface ConversationViewProps {
@@ -282,10 +296,9 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   // Content filter. It narrows what is drawn from the messages already loaded;
   // it never changes what is fetched, so paging and live updates are untouched.
   const [filter, setFilter] = useState<ConversationFilter>(EMPTY_CONVERSATION_FILTER);
-  // "list" is the classic flat transcript; "digest" groups it into turns.
-  const [viewMode, setViewMode] = useState<"list" | "digest">("list");
-  // Free-text search over the digest turns (prompt, reply, tool names, message text).
-  const [turnQuery, setTurnQuery] = useState("");
+  // "digest" is the default turn-based view; "list" is the classic flat transcript.
+  // The choice is remembered in `localStorage` and restored on the next visit.
+  const [viewMode, setViewMode] = useState<"digest" | "list">(loadStoredViewMode);
   const filterActive = isConversationFilterActive(filter);
   // What is shown when nothing has been picked: every agent together when the session has
   // more than one transcript, otherwise the main transcript.
@@ -309,8 +322,6 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   // Turns for the digest view, derived from the same filtered stream the list
   // renders, so both views always show exactly the same messages.
   const turns = useMemo(() => groupIntoTurns(shownMessages), [shownMessages]);
-  // Turns narrowed by the digest search box; empty query shows everything.
-  const visibleTurns = useMemo(() => filterTurns(turns, turnQuery), [turns, turnQuery]);
 
   // Track JSONL line numbers for incremental requests and history loading
   const lastLineRef = useRef(0);
@@ -362,6 +373,15 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       setSelectedTranscript(initialTranscriptId);
     }
   }, [initialTranscriptId]);
+
+  // Remember the view mode so the next visit opens the same one.
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch {
+      // Non-fatal - the preference simply does not persist.
+    }
+  }, [viewMode]);
 
   // Initial load: fetch the latest N messages
   useEffect(() => {
@@ -620,6 +640,16 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     });
   }, [combinedMode, combined.loadOlder, loadHistory]);
 
+  // Digest mode: keep loading earlier history until the whole conversation is
+  // present (or the safety cap is reached), so the outline always shows every
+  // turn. List mode keeps the manual "load earlier" behavior.
+  useEffect(() => {
+    if (viewMode !== "digest") return;
+    if (viewLoading || viewLoadingHistory || !viewHasMore) return;
+    if (viewMessages.length >= DIGEST_HISTORY_CAP) return;
+    loadOlderView();
+  }, [viewMode, viewLoading, viewLoadingHistory, viewHasMore, viewMessages.length, loadOlderView]);
+
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -721,7 +751,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
               type="button"
               onClick={() => setViewMode("list")}
               aria-pressed={viewMode === "list"}
-              title={t("detail.transcript.digest.list")}
+              title={t("detail.transcript.digest.toggleList")}
               data-testid="view-mode-list"
               className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 transition-colors ${
                 viewMode === "list"
@@ -730,13 +760,13 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
               }`}
             >
               <List className="w-3 h-3" />
-              {t("detail.transcript.digest.list")}
+              {t("detail.transcript.digest.toggleList")}
             </button>
             <button
               type="button"
               onClick={() => setViewMode("digest")}
               aria-pressed={viewMode === "digest"}
-              title={t("detail.transcript.digest.view")}
+              title={t("detail.transcript.digest.toggleDigest")}
               data-testid="view-mode-digest"
               className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 transition-colors border-l border-surface-3 ${
                 viewMode === "digest"
@@ -745,7 +775,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
               }`}
             >
               <Layers className="w-3 h-3" />
-              {t("detail.transcript.digest.view")}
+              {t("detail.transcript.digest.toggleDigest")}
             </button>
           </div>
           <button
@@ -863,34 +893,45 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
         ref={scrollContainerRef}
         onScroll={handleScroll}
         data-testid="transcript-scroll-container"
-        className="flex-1 overflow-y-auto"
-        style={{ maxHeight: "calc(100vh - 320px)", minHeight: 200 }}
+        // The digest gets a fixed-height box (`flex-none`, so the flex column cannot
+        // stretch it to its content): its two panes scroll on their own inside it and
+        // the page itself never moves. The list keeps its single scrolling column.
+        className={viewMode === "digest" ? "flex-none overflow-hidden" : "flex-1 overflow-y-auto"}
+        style={
+          viewMode === "digest"
+            ? { height: "calc(100vh - 320px)", minHeight: 360 }
+            : { maxHeight: "calc(100vh - 320px)", minHeight: 200 }
+        }
       >
-        <div ref={historySentinelRef} aria-hidden="true" className="h-px" />
-        {/* History loading indicator */}
-        {viewLoadingHistory && (
-          <div className="flex justify-center py-3">
-            <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
-            <span className="text-xs text-gray-500 ml-2">Loading history...</span>
-          </div>
-        )}
+        {viewMode === "list" && (
+          <>
+            <div ref={historySentinelRef} aria-hidden="true" className="h-px" />
+            {/* History loading indicator */}
+            {viewLoadingHistory && (
+              <div className="flex justify-center py-3">
+                <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                <span className="text-xs text-gray-500 ml-2">Loading history...</span>
+              </div>
+            )}
 
-        {/* Scroll-up for history hint */}
-        {viewHasMore && !viewLoadingHistory && !viewLoading && (
-          <div className="flex justify-center py-2">
-            <button
-              type="button"
-              onClick={loadOlderView}
-              className="text-[11px] text-gray-500 hover:text-violet-300 transition-colors"
-            >
-              {t("detail.transcript.loadOlder")}
-            </button>
-          </div>
-        )}
-        {combinedMode && combined.heldBack > 0 && (
-          <p className="text-center text-[11px] text-gray-500 pb-2">
-            {t("detail.transcript.heldBack", { count: combined.heldBack })}
-          </p>
+            {/* Scroll-up for history hint */}
+            {viewHasMore && !viewLoadingHistory && !viewLoading && (
+              <div className="flex justify-center py-2">
+                <button
+                  type="button"
+                  onClick={loadOlderView}
+                  className="text-[11px] text-gray-500 hover:text-violet-300 transition-colors"
+                >
+                  {t("detail.transcript.loadOlder")}
+                </button>
+              </div>
+            )}
+            {combinedMode && combined.heldBack > 0 && (
+              <p className="text-center text-[11px] text-gray-500 pb-2">
+                {t("detail.transcript.heldBack", { count: combined.heldBack })}
+              </p>
+            )}
+          </>
         )}
 
         {viewLoading ? (
@@ -912,32 +953,8 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
             {t("detail.transcript.filter.noMatch")}
           </p>
         ) : viewMode === "digest" ? (
-          <div className="px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <div className="relative flex-1 min-w-[180px] max-w-sm">
-                <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="search"
-                  value={turnQuery}
-                  onChange={(e) => setTurnQuery(e.target.value)}
-                  placeholder={t("detail.transcript.digest.searchPlaceholder")}
-                  aria-label={t("detail.transcript.digest.searchLabel")}
-                  data-testid="digest-search"
-                  className="w-full bg-surface-2 border border-surface-3 rounded-lg pl-8 pr-3 py-1.5 text-sm text-gray-300 placeholder:text-gray-500 focus:outline-none focus:border-violet-500/50"
-                />
-              </div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 font-mono bg-surface-2 border border-surface-3 rounded-md px-2 py-1">
-                <Layers className="w-3 h-3" />
-                {t("detail.transcript.digest.turns", { count: visibleTurns.length })}
-              </span>
-            </div>
-            {visibleTurns.length === 0 ? (
-              <p className="py-8 text-center text-sm text-gray-400">
-                {t("detail.transcript.digest.noMatch")}
-              </p>
-            ) : (
-              <TurnDigest turns={visibleTurns} showSource={combinedMode} />
-            )}
+          <div className="h-full px-4 py-3">
+            <TurnDigest turns={turns} showSource={combinedMode} loadingHistory={viewHasMore} />
           </div>
         ) : (
           <MessageList messages={shownMessages} loading={false} showSource={combinedMode} />
