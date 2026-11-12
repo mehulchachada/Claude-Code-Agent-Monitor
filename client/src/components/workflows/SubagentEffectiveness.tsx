@@ -287,7 +287,7 @@ function SuccessRing({ rate, color }: SuccessRingProps) {
           cy={center}
           r={RING_RADIUS}
           fill="none"
-          stroke="#2a2a3d"
+          stroke="rgb(var(--c-border))"
           strokeWidth={RING_STROKE}
         />
         {/* Arc */}
@@ -382,7 +382,7 @@ function Sparkline({ data, color }: SparklineProps) {
                 className="absolute bottom-0 left-0 right-0 rounded-sm transition-all duration-300"
                 style={{
                   height: `${heightPct}%`,
-                  backgroundColor: value > 0 ? color : "#2a2a3d",
+                  backgroundColor: value > 0 ? color : "rgb(var(--c-border))",
                   opacity: tip?.index === i ? 1 : value > 0 ? 0.85 : 0.4,
                 }}
               />
@@ -467,7 +467,7 @@ function SparklineTooltip({
     <div
       ref={ref}
       role="tooltip"
-      className="fixed z-[60] px-2 py-1 bg-[#12121f] border border-[#2a2a4a] rounded-md shadow-xl text-[10px] text-gray-200 whitespace-nowrap pointer-events-none"
+      className="fixed z-[60] px-2 py-1 bg-[rgb(var(--c-chart-bg))] border border-[rgb(var(--c-chart-line))] rounded-md shadow-xl text-[10px] text-gray-200 whitespace-nowrap pointer-events-none"
       style={{ left: pos.left, top: pos.top }}
     >
       <span className="font-medium">{label}</span>

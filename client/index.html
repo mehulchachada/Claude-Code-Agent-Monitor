@@ -1,25 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Apply the stored theme (or the system preference) before first paint
-      // so there is no flash of the wrong appearance.
+      // Apply a stored light theme before first paint (dark is the default).
       (function () {
         try {
-          var stored = localStorage.getItem("agent-dashboard-theme");
-          var dark =
-            stored === "dark" ||
-            ((stored === "light" || stored === "system" || stored === null) &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches);
-          if (stored === "light") dark = false;
-          if (dark) document.documentElement.classList.add("dark");
+          var mode = localStorage.getItem("agent-dashboard-theme");
+          var light =
+            mode === "light" ||
+            (mode === "system" && window.matchMedia("(prefers-color-scheme: light)").matches);
+          if (light) {
+            document.documentElement.classList.remove("dark");
+            document.documentElement.classList.add("light");
+          }
         } catch (e) {
-          /* non-critical */
+          /* storage unavailable: stay dark */
         }
       })();
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />

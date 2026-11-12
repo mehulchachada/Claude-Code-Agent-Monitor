@@ -324,7 +324,7 @@ function renderHistogram(svg: SVGSVGElement, histo: HistogramBucket[], opts: His
     .attr("x2", innerW)
     .attr("y1", (d) => yScale(d))
     .attr("y2", (d) => yScale(d))
-    .attr("stroke", "#2a2a3d")
+    .attr("stroke", "rgb(var(--c-border))")
     .attr("stroke-width", 1);
 
   // Y axis (sessions)
@@ -349,7 +349,7 @@ function renderHistogram(svg: SVGSVGElement, histo: HistogramBucket[], opts: His
     .call(d3.axisBottom(xScale).tickSize(0).tickPadding(8))
     .call((ax) => ax.select(".domain").remove())
     .selectAll("text")
-    .attr("fill", "#9ca3af")
+    .attr("fill", "rgb(var(--c-gray-400))")
     .attr("font-size", 10)
     .attr("font-family", "Inter, sans-serif");
 
@@ -415,7 +415,7 @@ function renderHistogram(svg: SVGSVGElement, histo: HistogramBucket[], opts: His
         .attr("y", innerH - 1)
         .attr("width", bw)
         .attr("height", 1)
-        .attr("fill", "#2a2a3d");
+        .attr("fill", "rgb(var(--c-border))");
     }
 
     // Transparent, full-height hover target on top of the bar.
@@ -595,7 +595,7 @@ export function CompactionImpact({ data }: CompactionImpactProps) {
       {/* Hover tooltip (matches the app's other chart tooltips) */}
       {tip && (
         <div
-          className="fixed z-50 pointer-events-none rounded-md border border-[#2a2a4a] bg-[#12121f] px-2.5 py-1.5 text-xs shadow-xl"
+          className="fixed z-50 pointer-events-none rounded-md border border-[rgb(var(--c-chart-line))] bg-[rgb(var(--c-chart-bg))] px-2.5 py-1.5 text-xs shadow-xl"
           style={{
             left: tip.x > window.innerWidth - 220 ? tip.x - 14 : tip.x + 14,
             top: tip.y - 10,

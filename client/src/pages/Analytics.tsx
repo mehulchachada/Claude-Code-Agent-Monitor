@@ -285,7 +285,7 @@ function ChartTooltip({ x, y, children }: { x: number; y: number; children: Reac
   const nearRight = x > window.innerWidth - 200;
   return (
     <div
-      className="fixed z-50 px-2 py-1.5 text-xs bg-[#12121f] border border-[#2a2a4a] rounded shadow-xl text-gray-200 pointer-events-none whitespace-nowrap"
+      className="fixed z-50 px-2 py-1.5 text-xs bg-[rgb(var(--c-chart-bg))] border border-[rgb(var(--c-chart-line))] rounded shadow-xl text-gray-200 pointer-events-none whitespace-nowrap"
       style={{
         left: nearRight ? x - 14 : x + 14,
         top: y - 10,
@@ -340,7 +340,7 @@ function useTooltip() {
  * @returns A CSS color.
  */
 function cellColor(count: number, max: number) {
-  if (count === 0) return "#161625";
+  if (count === 0) return "rgb(var(--c-chart-empty))";
   // Log scale + RGB interpolation across a wide color ramp for maximum perceptual range
   const t = Math.log(count + 1) / Math.log(Math.max(max, 1) + 1);
   // Ramp: near-black indigo → deep indigo → bright indigo → lavender
@@ -755,7 +755,14 @@ function DonutChart({
     <div className="flex items-center justify-center gap-6 w-full">
       {node}
       <svg width={128} height={128} viewBox="0 0 128 128" className="flex-shrink-0">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1e1e2e" strokeWidth={stroke} />
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke="rgb(var(--c-chart-track))"
+          strokeWidth={stroke}
+        />
         {segments.map(({ label, value, color }, i) => {
           const dash = (value / total) * circumference;
           const gap = circumference - dash;

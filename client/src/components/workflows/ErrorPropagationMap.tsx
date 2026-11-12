@@ -305,7 +305,7 @@ export function ErrorPropagationMap({ data }: ErrorPropagationMapProps) {
                     </div>
                     <span
                       className="text-xs font-semibold tabular-nums w-7 text-right transition-colors"
-                      style={{ color: isHovered ? color : "#9ca3af" }}
+                      style={{ color: isHovered ? color : "rgb(var(--c-gray-400))" }}
                     >
                       {d.count}
                     </span>

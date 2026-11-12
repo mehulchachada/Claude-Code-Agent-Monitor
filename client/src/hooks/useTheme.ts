@@ -1,8 +1,8 @@
 /**
  * @file useTheme.ts
  * @description React hook that manages the dashboard's dark/light theme.
- * Reads the user's stored preference (localStorage), falls back to the
- * system `prefers-color-scheme`, applies the `dark` class on `<html>`,
+ * Reads the user's stored preference (localStorage), defaulting to dark
+ * when nothing is stored, applies the `dark`/`light` class on `<html>`,
  * persists explicit choices, and tracks live system-preference changes.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
@@ -20,7 +20,8 @@ const STORAGE_KEY = "agent-dashboard-theme";
 
 /**
  * Read the stored theme mode from localStorage.
- * Returns `"system"` when nothing is stored or the value is invalid.
+ * Returns `"dark"` when nothing is stored or the value is invalid
+ * (dark is the default; "system" is still a choice the user can make).
  */
 export function readStoredTheme(): ThemeMode {
   try {
@@ -29,7 +30,7 @@ export function readStoredTheme(): ThemeMode {
   } catch {
     /* localStorage unavailable (SSR, privacy mode) – fall through */
   }
-  return "system";
+  return "dark";
 }
 
 /**
@@ -56,15 +57,13 @@ export function resolveTheme(mode: ThemeMode): ResolvedTheme {
 }
 
 /**
- * Apply or remove the `dark` class on the document root.
+ * Set the `dark`/`light` classes on the document root.
  */
 function applyTheme(resolved: ResolvedTheme): void {
   if (typeof document === "undefined") return;
-  if (resolved === "dark") {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
+  const root = document.documentElement;
+  root.classList.toggle("dark", resolved === "dark");
+  root.classList.toggle("light", resolved === "light");
 }
 
 /**

@@ -56,6 +56,7 @@ describe("useTheme", () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove("dark");
+    document.documentElement.classList.remove("light");
   });
 
   afterEach(() => {
@@ -70,13 +71,13 @@ describe("useTheme", () => {
       expect(readStoredTheme()).toBe("dark");
     });
 
-    it("falls back to system when nothing is stored", () => {
-      expect(readStoredTheme()).toBe("system");
+    it("falls back to dark when nothing is stored", () => {
+      expect(readStoredTheme()).toBe("dark");
     });
 
-    it("falls back to system when the stored value is invalid", () => {
+    it("falls back to dark when the stored value is invalid", () => {
       localStorage.setItem("agent-dashboard-theme", "neon");
-      expect(readStoredTheme()).toBe("system");
+      expect(readStoredTheme()).toBe("dark");
     });
   });
 
@@ -96,19 +97,33 @@ describe("useTheme", () => {
   });
 
   describe("hook behaviour", () => {
-    it("defaults to the system preference and applies the dark class", () => {
+    it("defaults to dark even when the system prefers light", () => {
+      installMatchMedia(false);
+      const { result } = renderHook(() => useTheme());
+      expect(result.current.mode).toBe("dark");
+      expect(result.current.resolved).toBe("dark");
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+      expect(document.documentElement.classList.contains("light")).toBe(false);
+    });
+
+    it("resolves a stored system choice to light when the system prefers light", () => {
+      installMatchMedia(false);
+      writeStoredTheme("system");
+      const { result } = renderHook(() => useTheme());
+      expect(result.current.mode).toBe("system");
+      expect(result.current.resolved).toBe("light");
+      expect(document.documentElement.classList.contains("light")).toBe(true);
+      expect(document.documentElement.classList.contains("dark")).toBe(false);
+    });
+
+    it("resolves a stored system choice to dark when the system prefers dark", () => {
       installMatchMedia(true);
+      writeStoredTheme("system");
       const { result } = renderHook(() => useTheme());
       expect(result.current.mode).toBe("system");
       expect(result.current.resolved).toBe("dark");
       expect(document.documentElement.classList.contains("dark")).toBe(true);
-    });
-
-    it("applies light mode when the system prefers light", () => {
-      installMatchMedia(false);
-      const { result } = renderHook(() => useTheme());
-      expect(result.current.resolved).toBe("light");
-      expect(document.documentElement.classList.contains("dark")).toBe(false);
+      expect(document.documentElement.classList.contains("light")).toBe(false);
     });
 
     it("persists an explicit choice and applies it immediately", () => {
@@ -125,7 +140,7 @@ describe("useTheme", () => {
       expect(readStoredTheme()).toBe("dark");
     });
 
-    it("switches back to light and removes the dark class", () => {
+    it("switches to light and removes the dark class", () => {
       installMatchMedia(true);
       const { result } = renderHook(() => useTheme());
 
@@ -134,8 +149,24 @@ describe("useTheme", () => {
       });
 
       expect(result.current.resolved).toBe("light");
+      expect(document.documentElement.classList.contains("light")).toBe(true);
       expect(document.documentElement.classList.contains("dark")).toBe(false);
       expect(readStoredTheme()).toBe("light");
+    });
+
+    it("switches back to dark and removes the light class", () => {
+      installMatchMedia(false);
+      writeStoredTheme("light");
+      const { result } = renderHook(() => useTheme());
+
+      act(() => {
+        result.current.setMode("dark");
+      });
+
+      expect(result.current.resolved).toBe("dark");
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+      expect(document.documentElement.classList.contains("light")).toBe(false);
+      expect(readStoredTheme()).toBe("dark");
     });
 
     it("restores a stored explicit choice on mount", () => {
@@ -149,6 +180,7 @@ describe("useTheme", () => {
 
     it("follows live system-preference changes while in system mode", () => {
       const mq = installMatchMedia(true);
+      writeStoredTheme("system");
       const { result } = renderHook(() => useTheme());
       expect(result.current.resolved).toBe("dark");
 
@@ -158,10 +190,12 @@ describe("useTheme", () => {
 
       expect(result.current.resolved).toBe("light");
       expect(document.documentElement.classList.contains("dark")).toBe(false);
+      expect(document.documentElement.classList.contains("light")).toBe(true);
     });
 
     it("ignores system changes once an explicit mode is chosen", () => {
       const mq = installMatchMedia(true);
+      writeStoredTheme("system");
       const { result } = renderHook(() => useTheme());
 
       act(() => {
